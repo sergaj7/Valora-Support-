@@ -496,6 +496,7 @@ async def cmd_autoclose(interaction: discord.Interaction, enabled: bool):
 @bot.tree.command(name="verifypanel", description="Send the verification panel (Admin only)")
 @app_commands.guild_only()
 async def cmd_verifypanel(interaction: discord.Interaction):
+
     if not is_admin(interaction.user):
         await interaction.response.send_message("❌ Admin only.", ephemeral=True)
         return
@@ -503,42 +504,43 @@ async def cmd_verifypanel(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
 
     redirect_uri = f"{WEB_BASE_URL}/callback"
-encoded_redirect = urllib.parse.quote(redirect_uri, safe="")
+    encoded_redirect = urllib.parse.quote(redirect_uri, safe="")
 
-oauth_url = (
-    "https://discord.com/oauth2/authorize"
-    f"?client_id={CLIENT_ID}"
-    f"&redirect_uri={encoded_redirect}"
-    "&response_type=code"
-    "&scope=identify%20guilds.join"
-)
-
-print("WEB_BASE_URL =", WEB_BASE_URL)
-print("redirect_uri =", redirect_uri)
-print("oauth_url =", oauth_url)
-
-embed = discord.Embed(
-    title="🔐 Valora Verification",
-    description=(
-        "**Verify your Discord account to gain full access.**\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        "🔒 **Why verify?**\n"
-        "Keeps our server safe from bots and raiders.\n\n"
-        "✅ **What happens?**\n"
-        "You receive the **Verified** role and unlock all channels.\n\n"
-        "🌐 **How?**\n"
-        "Click the button — log in with Discord on our secure page.\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━\n"
-        "*We do not store your password or personal data.*"
-    ),
-        color=VALORA_COLOR, timestamp=datetime.now(timezone.utc)
+    oauth_url = (
+        "https://discord.com/oauth2/authorize"
+        f"?client_id={CLIENT_ID}"
+        f"&redirect_uri={encoded_redirect}"
+        "&response_type=code"
+        "&scope=identify%20guilds.join"
     )
-set_logo(embed)
-embed.set_footer(text="Valora Store • Secure Verification 🔐")
 
-await interaction.channel.send(embed=embed, view=VerifyView(oauth_url))
-await interaction.followup.send("✅ Verify panel sent!", ephemeral=True)
+    print("WEB_BASE_URL =", WEB_BASE_URL)
+    print("redirect_uri =", redirect_uri)
+    print("oauth_url =", oauth_url)
 
+    embed = discord.Embed(
+        title="🔐 Valora Verification",
+        description=(
+            "**Verify your Discord account to gain full access.**\n\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            "🔒 **Why verify?**\n"
+            "Keeps our server safe from bots and raiders.\n\n"
+            "✅ **What happens?**\n"
+            "You receive the **Verified** role and unlock all channels.\n\n"
+            "🌐 **How?**\n"
+            "Click the button — log in with Discord on our secure page.\n\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "*We do not store your password or personal data.*"
+        ),
+        color=VALORA_COLOR,
+        timestamp=datetime.now(timezone.utc)
+    )
+
+    set_logo(embed)
+    embed.set_footer(text="Valora Store • Secure Verification 🔐")
+
+    await interaction.channel.send(embed=embed, view=VerifyView(oauth_url))
+    await interaction.followup.send("✅ Verify panel sent!", ephemeral=True)
 
 # ============================================================
 #  SLASH — BACKUP / RESTORE
