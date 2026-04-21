@@ -19,22 +19,26 @@ load_dotenv()
 # ============================================================
 #  CONFIG
 # ============================================================
-TOKEN                 = os.getenv("DISCORD_TOKEN", "")
-GUILD_ID              = int(os.getenv("GUILD_ID", 0))
-TICKET_CATEGORY_ID    = int(os.getenv("TICKET_CATEGORY_ID", 0))
-TRANSCRIPT_CHANNEL_ID = int(os.getenv("TRANSCRIPT_CHANNEL_ID", 0))
-STAFF_ROLE_IDS        = [int(x) for x in os.getenv("STAFF_ROLE_IDS", "").split(",") if x.strip().isdigit()]
-ADMIN_ROLE_IDS        = [int(x) for x in os.getenv("ADMIN_ROLE_IDS", "").split(",") if x.strip().isdigit()]
-AUTO_CLOSE_HOURS      = int(os.getenv("AUTO_CLOSE_HOURS", 24))
-VALORA_LOGO           = os.getenv("VALORA_LOGO", "").strip()
-VALORA_WEBSITE        = "https://valora-store.mysellauth.com/"
-VALORA_COLOR          = 0x00BFFF
+TOKEN                    = os.getenv("DISCORD_TOKEN", "")
+GUILD_ID                 = int(os.getenv("GUILD_ID", 0))
+TICKET_CATEGORY_ID       = int(os.getenv("TICKET_CATEGORY_ID", 0))
+TRANSCRIPT_CHANNEL_ID    = int(os.getenv("TRANSCRIPT_CHANNEL_ID", 0))
+STAFF_ROLE_IDS           = [int(x) for x in os.getenv("STAFF_ROLE_IDS", "").split(",") if x.strip().isdigit()]
+ADMIN_ROLE_IDS           = [int(x) for x in os.getenv("ADMIN_ROLE_IDS", "").split(",") if x.strip().isdigit()]
+AUTO_CLOSE_HOURS         = int(os.getenv("AUTO_CLOSE_HOURS", 24))
+VALORA_LOGO              = os.getenv("VALORA_LOGO", "").strip()
+VALORA_WEBSITE           = "https://valora-store.mysellauth.com/"
+VALORA_COLOR             = 0x00BFFF
 
 # OAuth2 / Verify
-CLIENT_ID             = os.getenv("DISCORD_CLIENT_ID", "")
-CLIENT_SECRET         = os.getenv("DISCORD_CLIENT_SECRET", "")
-WEB_BASE_URL          = os.getenv("WEB_BASE_URL", "http://localhost:5000")
-VERIFIED_ROLE_ID      = int(os.getenv("VERIFIED_ROLE_ID", 0))
+CLIENT_ID                = os.getenv("DISCORD_CLIENT_ID", "")
+CLIENT_SECRET            = os.getenv("DISCORD_CLIENT_SECRET", "")
+WEB_BASE_URL             = os.getenv("WEB_BASE_URL", "http://localhost:5000")
+VERIFIED_ROLE_ID         = int(os.getenv("VERIFIED_ROLE_ID", 0))
+
+# Staff Applications
+APPLICATION_CHANNEL_ID   = int(os.getenv("APPLICATION_CHANNEL_ID", 0))
+APPLICATION_LOG_CHANNEL  = int(os.getenv("APPLICATION_LOG_CHANNEL", 0))
 
 TICKET_CATEGORIES = {
     "purchase": {"label": "Purchase",               "description": "Request help with a purchase.",       "emoji": "🛒", "color": 0x00BFFF},
@@ -54,8 +58,9 @@ def set_logo(embed: discord.Embed):
 # ============================================================
 #  STORAGE
 # ============================================================
-TICKETS_FILE  = "tickets.json"
-VERIFIED_FILE = "verified.json"
+TICKETS_FILE      = "tickets.json"
+VERIFIED_FILE     = "verified.json"
+APPLICATIONS_FILE = "applications.json"
 
 def load_json(path):
     if os.path.exists(path):
@@ -67,8 +72,9 @@ def save_json(path, data):
     with open(path, "w") as f:
         json.dump(data, f, indent=2)
 
-tickets_data  = load_json(TICKETS_FILE)
-verified_data = load_json(VERIFIED_FILE)
+tickets_data      = load_json(TICKETS_FILE)
+verified_data     = load_json(VERIFIED_FILE)
+applications_data = load_json(APPLICATIONS_FILE)
 
 # ============================================================
 #  PERMISSION HELPERS
@@ -221,6 +227,374 @@ async def close_ticket(channel, guild, closed_by=None):
     except Exception as e: print(f"Channel delete error: {e}")
 
 # ============================================================
+#  STAFF APPLICATION — HELPERS
+# ============================================================
+async def notify_applicant(user_id: int, action: str, reason: str = ""):
+    """DM the applicant with the decision."""
+    try:
+        user = await bot.fetch_user(user_id)
+    except Exception:
+        return
+
+    if action == "accepted":
+        color = 0x00FF88
+        title = "✅ Staff Application — Accepted!"
+        desc  = (f"**Congratulations!** Your staff application at **Valora Store** has been **accepted**.\n\n"
+                 f"A staff member will contact you shortly with further instructions.\n\n"
+                 f"🌐 {VALORA_WEBSITE}")
+    elif action == "denied":
+        color = 0xFF4444
+        title = "❌ Staff Application — Denied"
+        desc  = ("Thank you for applying to **Valora Store**.\n\n"
+                 "Unfortunately your application was **not accepted** at this time.\n\n"
+                 + (f"**Reason:** {reason}\n\n" if reason else "")
+                 + "You're welcome to re-apply in the future. 💙")
+    elif action == "on_hold":
+        color = 0xFFD700
+        title = "⏸️ Staff Application — On Hold"
+        desc  = ("Your application at **Valora Store** has been placed **on hold**.\n\n"
+                 + (f"**Note:** {reason}\n\n" if reason else "")
+                 + "We will get back to you as soon as possible.")
+    else:
+        return
+
+    embed = discord.Embed(title=title, description=desc, color=color,
+                          timestamp=datetime.now(timezone.utc))
+    embed.set_footer(text="Valora Store • Staff Applications")
+    set_logo(embed)
+    try:
+        await user.send(embed=embed)
+    except discord.Forbidden:
+        pass  # DMs closed
+
+
+async def update_application_embed(app_id: str, action: str, reviewer: discord.Member, reason: str = ""):
+    """Edit the original application embed to show decision."""
+    app_data = applications_data.get(app_id)
+    if not app_data:
+        return
+
+    guild = bot.get_guild(GUILD_ID)
+    if not guild:
+        return
+    channel = guild.get_channel(app_data.get("channel_id", APPLICATION_CHANNEL_ID))
+    if not channel:
+        return
+    try:
+        msg = await channel.fetch_message(app_data["message_id"])
+    except Exception:
+        return
+
+    status_map = {
+        "accepted": ("✅ ACCEPTED", 0x00FF88),
+        "denied":   ("❌ DENIED",   0xFF4444),
+        "on_hold":  ("⏸️ ON HOLD",  0xFFD700),
+    }
+    status_label, color = status_map.get(action, ("❓ UNKNOWN", 0x888888))
+
+    old   = msg.embeds[0] if msg.embeds else None
+    embed = discord.Embed(title=old.title if old else "Staff Application", color=color,
+                          timestamp=datetime.now(timezone.utc))
+    if old:
+        for field in old.fields:
+            embed.add_field(name=field.name, value=field.value, inline=field.inline)
+
+    embed.add_field(
+        name="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        value=(f"**Status:** {status_label}\n"
+               f"**Reviewed by:** {reviewer.mention}\n"
+               f"**Reviewed at:** <t:{int(datetime.now(timezone.utc).timestamp())}:F>"
+               + (f"\n**Reason:** {reason}" if reason else "")),
+        inline=False
+    )
+    embed.set_footer(text=f"Application ID: {app_id} • Valora Store")
+    set_logo(embed)
+    await msg.edit(embed=embed, view=None)  # remove buttons after decision
+
+
+# ============================================================
+#  STAFF APPLICATION — MODALS
+# ============================================================
+class DenyReasonModal(discord.ui.Modal, title="Deny Application"):
+    reason = discord.ui.TextInput(
+        label="Reason for denial (optional)",
+        placeholder="Enter a reason that will be sent to the applicant...",
+        required=False, max_length=500,
+        style=discord.TextStyle.paragraph
+    )
+
+    def __init__(self, app_id: str):
+        super().__init__()
+        self.app_id = app_id
+
+    async def on_submit(self, interaction: discord.Interaction):
+        app_data = applications_data.get(self.app_id)
+        if not app_data:
+            await interaction.response.send_message("❌ Application not found.", ephemeral=True)
+            return
+        reason_text = self.reason.value.strip()
+        applications_data[self.app_id].update({
+            "status": "denied", "reviewed_by": interaction.user.id,
+            "reviewed_at": datetime.now(timezone.utc).isoformat(), "deny_reason": reason_text
+        })
+        save_json(APPLICATIONS_FILE, applications_data)
+        await update_application_embed(self.app_id, "denied", interaction.user, reason_text)
+        await notify_applicant(app_data["discord_id"], "denied", reason_text)
+        await interaction.response.send_message(
+            embed=discord.Embed(
+                description=f"❌ Application `{self.app_id}` denied."
+                            + (f"\n**Reason:** {reason_text}" if reason_text else ""),
+                color=0xFF4444), ephemeral=True)
+
+
+class OnHoldReasonModal(discord.ui.Modal, title="Put Application On Hold"):
+    reason = discord.ui.TextInput(
+        label="Note for the applicant (optional)",
+        placeholder="Enter a note that will be sent to the applicant...",
+        required=False, max_length=500,
+        style=discord.TextStyle.paragraph
+    )
+
+    def __init__(self, app_id: str):
+        super().__init__()
+        self.app_id = app_id
+
+    async def on_submit(self, interaction: discord.Interaction):
+        app_data = applications_data.get(self.app_id)
+        if not app_data:
+            await interaction.response.send_message("❌ Application not found.", ephemeral=True)
+            return
+        note_text = self.reason.value.strip()
+        applications_data[self.app_id].update({
+            "status": "on_hold", "reviewed_by": interaction.user.id,
+            "reviewed_at": datetime.now(timezone.utc).isoformat()
+        })
+        save_json(APPLICATIONS_FILE, applications_data)
+        await update_application_embed(self.app_id, "on_hold", interaction.user, note_text)
+        await notify_applicant(app_data["discord_id"], "on_hold", note_text)
+        await interaction.response.send_message(
+            embed=discord.Embed(description=f"⏸️ Application `{self.app_id}` placed on hold.", color=0xFFD700),
+            ephemeral=True)
+
+
+# ============================================================
+#  STAFF APPLICATION — REVIEW VIEW
+# ============================================================
+class ApplicationReviewView(discord.ui.View):
+    def __init__(self, app_id: str):
+        super().__init__(timeout=None)
+        self.app_id = app_id
+
+    def _resolve_app_id(self, message_id: int) -> str:
+        for aid, adata in applications_data.items():
+            if adata.get("message_id") == message_id:
+                return aid
+        return self.app_id  # fallback
+
+    @discord.ui.button(label="Accept", style=discord.ButtonStyle.success, emoji="✅",
+                       custom_id="app_accept")
+    async def accept_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not is_staff(interaction.user):
+            await interaction.response.send_message("❌ Staff only.", ephemeral=True)
+            return
+        app_id   = self._resolve_app_id(interaction.message.id)
+        app_data = applications_data.get(app_id)
+        if not app_data:
+            await interaction.response.send_message("❌ Application not found.", ephemeral=True)
+            return
+        if app_data.get("status") not in ("pending", "on_hold"):
+            await interaction.response.send_message("❌ Already reviewed.", ephemeral=True)
+            return
+        applications_data[app_id].update({
+            "status": "accepted", "reviewed_by": interaction.user.id,
+            "reviewed_at": datetime.now(timezone.utc).isoformat()
+        })
+        save_json(APPLICATIONS_FILE, applications_data)
+        await update_application_embed(app_id, "accepted", interaction.user)
+        await notify_applicant(app_data["discord_id"], "accepted")
+        await interaction.response.send_message(
+            embed=discord.Embed(
+                description=f"✅ Application `{app_id}` accepted! Applicant has been notified.",
+                color=0x00FF88), ephemeral=True)
+
+    @discord.ui.button(label="Deny", style=discord.ButtonStyle.danger, emoji="❌",
+                       custom_id="app_deny")
+    async def deny_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not is_staff(interaction.user):
+            await interaction.response.send_message("❌ Staff only.", ephemeral=True)
+            return
+        app_id   = self._resolve_app_id(interaction.message.id)
+        app_data = applications_data.get(app_id)
+        if not app_data:
+            await interaction.response.send_message("❌ Application not found.", ephemeral=True)
+            return
+        if app_data.get("status") not in ("pending", "on_hold"):
+            await interaction.response.send_message("❌ Already reviewed.", ephemeral=True)
+            return
+        await interaction.response.send_modal(DenyReasonModal(app_id=app_id))
+
+    @discord.ui.button(label="On Hold", style=discord.ButtonStyle.secondary, emoji="⏸️",
+                       custom_id="app_hold")
+    async def hold_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not is_staff(interaction.user):
+            await interaction.response.send_message("❌ Staff only.", ephemeral=True)
+            return
+        app_id   = self._resolve_app_id(interaction.message.id)
+        app_data = applications_data.get(app_id)
+        if not app_data:
+            await interaction.response.send_message("❌ Application not found.", ephemeral=True)
+            return
+        if app_data.get("status") != "pending":
+            await interaction.response.send_message("❌ Already reviewed or on hold.", ephemeral=True)
+            return
+        await interaction.response.send_modal(OnHoldReasonModal(app_id=app_id))
+
+    @discord.ui.button(label="Open Interview", style=discord.ButtonStyle.primary, emoji="🎫",
+                       custom_id="app_interview")
+    async def interview_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not is_staff(interaction.user):
+            await interaction.response.send_message("❌ Staff only.", ephemeral=True)
+            return
+        app_id   = self._resolve_app_id(interaction.message.id)
+        app_data = applications_data.get(app_id)
+        if not app_data:
+            await interaction.response.send_message("❌ Application not found.", ephemeral=True)
+            return
+        if applications_data[app_id].get("interview_channel"):
+            await interaction.response.send_message("❌ Interview channel already exists.", ephemeral=True)
+            return
+
+        guild        = interaction.guild
+        applicant_id = app_data.get("discord_id")
+        applicant    = guild.get_member(int(applicant_id)) if applicant_id else None
+
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            guild.me:           discord.PermissionOverwrite(view_channel=True, send_messages=True,
+                                                             manage_channels=True, read_message_history=True),
+        }
+        if applicant:
+            overwrites[applicant] = discord.PermissionOverwrite(view_channel=True, send_messages=True,
+                                                                  read_message_history=True)
+        for rid in STAFF_ROLE_IDS + ADMIN_ROLE_IDS:
+            role = guild.get_role(rid)
+            if role:
+                overwrites[role] = discord.PermissionOverwrite(view_channel=True, send_messages=True,
+                                                                 read_message_history=True)
+
+        cat_channel = guild.get_channel(TICKET_CATEGORY_ID)
+        uname_slug  = app_data.get("discord_username", "applicant").lower().replace(" ", "-")
+        num         = len([c for c in guild.text_channels if c.name.startswith("app-")]) + 1
+        try:
+            channel = await guild.create_text_channel(
+                name=f"app-{uname_slug}-{num:03d}",
+                overwrites=overwrites,
+                category=cat_channel,
+                topic=f"Staff Application Interview | app_id:{app_id}"
+            )
+        except Exception as e:
+            await interaction.response.send_message(f"❌ Could not create channel: {e}", ephemeral=True)
+            return
+
+        embed = discord.Embed(
+            title="🎫 Staff Application — Interview Channel",
+            description=(f"Interview channel for {applicant.mention if applicant else f'<@{applicant_id}>'}.\n\n"
+                         f"**Application ID:** `{app_id}`\n"
+                         "Staff can use this channel to interview or discuss the application."),
+            color=VALORA_COLOR, timestamp=datetime.now(timezone.utc)
+        )
+        set_logo(embed)
+        await channel.send(
+            content=" ".join(filter(None, [interaction.user.mention, applicant.mention if applicant else ""])),
+            embed=embed
+        )
+
+        applications_data[app_id]["interview_channel"] = channel.id
+        save_json(APPLICATIONS_FILE, applications_data)
+
+        await interaction.response.send_message(
+            embed=discord.Embed(
+                description=f"✅ Interview channel created: {channel.mention}", color=VALORA_COLOR),
+            ephemeral=True)
+
+
+# ============================================================
+#  BACKGROUND TASK — POLL FOR NEW APPLICATIONS
+# ============================================================
+@tasks.loop(seconds=10)
+async def poll_applications():
+    """Check applications.json for new pending applications and post them to Discord."""
+    global applications_data
+    fresh = load_json(APPLICATIONS_FILE)
+    for app_id, data in fresh.items():
+        # New application: pending and not yet posted
+        if data.get("status") == "pending" and not data.get("message_id"):
+            applications_data[app_id] = data
+            await _post_application(app_id)
+
+@poll_applications.before_loop
+async def before_poll():
+    await bot.wait_until_ready()
+
+
+async def _post_application(app_id: str):
+    """Build and post an application embed to the review channel."""
+    app_data = applications_data.get(app_id)
+    if not app_data:
+        return False
+
+    guild = bot.get_guild(GUILD_ID)
+    if not guild:
+        print("[APPS] Guild not found")
+        return False
+
+    channel = guild.get_channel(APPLICATION_CHANNEL_ID)
+    if not channel:
+        print(f"[APPS] APPLICATION_CHANNEL_ID {APPLICATION_CHANNEL_ID} not found")
+        return False
+
+    user_id      = app_data.get("discord_id", 0)
+    username     = app_data.get("discord_username", "Unknown")
+    submitted_ts = int(datetime.fromisoformat(app_data["submitted_at"]).timestamp())
+
+    embed = discord.Embed(
+        title=f"📋 Staff Application — {username}",
+        color=VALORA_COLOR,
+        timestamp=datetime.now(timezone.utc)
+    )
+    embed.set_footer(text=f"Application ID: {app_id} • Valora Store")
+    set_logo(embed)
+
+    embed.add_field(
+        name="👤 Applicant",
+        value=f"**Username:** {username}\n**Discord ID:** `{user_id}`\n**Submitted:** <t:{submitted_ts}:F>",
+        inline=False
+    )
+    embed.add_field(name="🎂 Age",                 value=app_data.get("age", "—"),            inline=True)
+    embed.add_field(name="🌍 Timezone",            value=app_data.get("timezone", "—"),        inline=True)
+    embed.add_field(name="🗣️ Languages",           value=app_data.get("languages", "—"),       inline=True)
+    embed.add_field(name="⏰ Weekly Availability", value=app_data.get("availability", "—"),    inline=True)
+    embed.add_field(name="📅 Discord Account Age", value=app_data.get("discord_since", "—"),  inline=True)
+    embed.add_field(name="🛡️ Previous Staff Exp.", value=app_data.get("previous_staff", "—"), inline=False)
+    embed.add_field(name="💡 Why Join Valora?",    value=app_data.get("why_valora", "—"),      inline=False)
+    embed.add_field(name="🔧 Skills & Strengths",  value=app_data.get("skills", "—"),          inline=False)
+    extra = app_data.get("extra", "") or "—"
+    embed.add_field(name="📌 Anything Else?",      value=extra,                                inline=False)
+
+    view = ApplicationReviewView(app_id=app_id)
+    try:
+        msg = await channel.send(embed=embed, view=view)
+        applications_data[app_id]["message_id"] = msg.id
+        applications_data[app_id]["channel_id"] = channel.id
+        save_json(APPLICATIONS_FILE, applications_data)
+        print(f"[APPS] ✅ Posted application {app_id} (msg {msg.id})")
+        return True
+    except Exception as e:
+        print(f"[APPS] ❌ Failed to post {app_id}: {e}")
+        return False
+
+
+# ============================================================
 #  VIEWS — TICKETS
 # ============================================================
 class TicketSelect(discord.ui.Select):
@@ -327,6 +701,7 @@ class StoreView(discord.ui.View):
         view.add_item(select)
         await interaction.response.send_message("Select ticket type:", view=view, ephemeral=True)
 
+
 # ============================================================
 #  VIEWS — VERIFY
 # ============================================================
@@ -334,11 +709,22 @@ class VerifyView(discord.ui.View):
     def __init__(self, oauth_url: str):
         super().__init__(timeout=None)
         self.add_item(discord.ui.Button(
-            label="Verify with Discord",
-            style=discord.ButtonStyle.link,
-            url=oauth_url,
-            emoji="🔐"
+            label="Verify with Discord", style=discord.ButtonStyle.link,
+            url=oauth_url, emoji="🔐"
         ))
+
+
+# ============================================================
+#  VIEWS — STAFF APPLY
+# ============================================================
+class StaffApplyView(discord.ui.View):
+    def __init__(self, apply_url: str):
+        super().__init__(timeout=None)
+        self.add_item(discord.ui.Button(
+            label="Apply for Staff", style=discord.ButtonStyle.link,
+            url=apply_url, emoji="📋"
+        ))
+
 
 # ============================================================
 #  BOT
@@ -356,7 +742,7 @@ bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 async def reload_verified_loop():
     global verified_data
     verified_data = load_json(VERIFIED_FILE)
-    print("🔄 verified.json neu geladen:", len(verified_data), "User")
+    print("🔄 verified.json reloaded:", len(verified_data), "users")
 
 @reload_verified_loop.before_loop
 async def before_reload_verified():
@@ -405,12 +791,21 @@ async def on_ready():
     bot.add_view(TicketPanelView())
     bot.add_view(TicketControlView())
     bot.add_view(StoreView())
+
+    # Re-register pending application views so buttons survive restarts
+    for app_id, data in applications_data.items():
+        if data.get("status") in ("pending", "on_hold") and data.get("message_id"):
+            bot.add_view(ApplicationReviewView(app_id=app_id))
+
     if not reload_verified_loop.is_running():
         reload_verified_loop.start()
-        print("🔄 verified reload loop gestartet")
+        print("🔄 verified reload loop started")
     if not auto_close_task.is_running():
         auto_close_task.start()
-        print("⏰ auto_close_task gestartet")
+        print("⏰ auto_close_task started")
+    if not poll_applications.is_running():
+        poll_applications.start()
+        print("📋 poll_applications started")
     try:
         synced = await bot.tree.sync()
         print(f"✅ Synced {len(synced)} slash commands")
@@ -572,9 +967,6 @@ async def cmd_verifypanel(interaction: discord.Interaction):
         "&response_type=code"
         "&scope=identify%20guilds.join"
     )
-    print("WEB_BASE_URL =", WEB_BASE_URL)
-    print("redirect_uri =", redirect_uri)
-    print("oauth_url    =", oauth_url)
     embed = discord.Embed(
         title="🔐 Valora Verification",
         description=("**Verify your Discord account to gain full access.**\n\n"
@@ -587,13 +979,109 @@ async def cmd_verifypanel(interaction: discord.Interaction):
                      "Click the button — log in with Discord on our secure page.\n\n"
                      "━━━━━━━━━━━━━━━━━━━━━━━\n"
                      "*We do not store your password or personal data.*"),
-        color=VALORA_COLOR,
-        timestamp=datetime.now(timezone.utc)
+        color=VALORA_COLOR, timestamp=datetime.now(timezone.utc)
     )
     set_logo(embed)
     embed.set_footer(text="Valora Store • Secure Verification 🔐")
     await interaction.channel.send(embed=embed, view=VerifyView(oauth_url))
     await interaction.followup.send("✅ Verify panel sent!", ephemeral=True)
+
+# ============================================================
+#  SLASH — STAFF APPLICATIONS
+# ============================================================
+@bot.tree.command(name="applypanel", description="Send the staff application panel (Admin only)")
+@app_commands.guild_only()
+async def cmd_applypanel(interaction: discord.Interaction):
+    if not is_admin(interaction.user):
+        await interaction.response.send_message("❌ Admin only.", ephemeral=True)
+        return
+    await interaction.response.defer(ephemeral=True)
+    apply_url = "https://valora-support-production.up.railway.app/apply"
+    embed = discord.Embed(
+        title="📋 Staff Application — Valora Store",
+        description=("**Want to become part of the Valora team?**\n\n"
+                     "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                     "👥 **What we're looking for:**\n"
+                     "├ Active & dedicated members\n"
+                     "├ Good communication skills\n"
+                     "├ Willingness to help customers\n"
+                     "└ Previous experience is a plus\n\n"
+                     "📋 **How to apply:**\n"
+                     "Click the button below, fill out the application form and submit it.\n"
+                     "Our team will review your application as soon as possible.\n\n"
+                     "━━━━━━━━━━━━━━━━━━━━━━━\n"
+                     "*All applications are reviewed manually by our admin team.*"),
+        color=VALORA_COLOR, timestamp=datetime.now(timezone.utc)
+    )
+    set_logo(embed)
+    embed.set_footer(text="Valora Store • Staff Applications 📋")
+    await interaction.channel.send(embed=embed, view=StaffApplyView(apply_url))
+    await interaction.followup.send("✅ Application panel sent!", ephemeral=True)
+
+
+@bot.tree.command(name="app_list", description="List all staff applications (Admin only)")
+@app_commands.guild_only()
+async def cmd_app_list(interaction: discord.Interaction):
+    if not is_admin(interaction.user):
+        await interaction.response.send_message("❌ Admin only.", ephemeral=True)
+        return
+    if not applications_data:
+        await interaction.response.send_message("📭 No applications found.", ephemeral=True)
+        return
+
+    status_icons = {"pending": "⏳", "accepted": "✅", "denied": "❌", "on_hold": "⏸️"}
+    lines = []
+    for app_id, data in sorted(applications_data.items(),
+                                key=lambda x: x[1].get("submitted_at", ""), reverse=True):
+        icon  = status_icons.get(data.get("status", "pending"), "❓")
+        uname = data.get("discord_username", "Unknown")
+        uid   = data.get("discord_id", "?")
+        date  = data.get("submitted_at", "")[:10]
+        lines.append(f"{icon} `{app_id}` — **{uname}** (`{uid}`) — {date}")
+
+    chunks, chunk, length = [], [], 0
+    for line in lines:
+        if length + len(line) > 3800:
+            chunks.append(chunk); chunk, length = [line], len(line)
+        else:
+            chunk.append(line); length += len(line)
+    if chunk:
+        chunks.append(chunk)
+
+    for i, ch in enumerate(chunks):
+        embed = discord.Embed(
+            title=f"📋 Staff Applications {'(cont.)' if i > 0 else ''}",
+            description="\n".join(ch), color=VALORA_COLOR
+        )
+        if i == 0:
+            embed.set_footer(text=f"Total: {len(applications_data)} applications")
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        else:
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
+
+@bot.tree.command(name="app_stats", description="Show application statistics (Admin only)")
+@app_commands.guild_only()
+async def cmd_app_stats(interaction: discord.Interaction):
+    if not is_admin(interaction.user):
+        await interaction.response.send_message("❌ Admin only.", ephemeral=True)
+        return
+    total   = len(applications_data)
+    pending  = sum(1 for v in applications_data.values() if v.get("status") == "pending")
+    accepted = sum(1 for v in applications_data.values() if v.get("status") == "accepted")
+    denied   = sum(1 for v in applications_data.values() if v.get("status") == "denied")
+    on_hold  = sum(1 for v in applications_data.values() if v.get("status") == "on_hold")
+    embed = discord.Embed(
+        title="📊 Application Statistics",
+        description=(f"📋 **Total Applications:** `{total}`\n"
+                     f"⏳ **Pending:** `{pending}`\n"
+                     f"✅ **Accepted:** `{accepted}`\n"
+                     f"❌ **Denied:** `{denied}`\n"
+                     f"⏸️ **On Hold:** `{on_hold}`"),
+        color=VALORA_COLOR, timestamp=datetime.now(timezone.utc)
+    )
+    embed.set_footer(text="Valora Store • Staff Applications")
+    await interaction.response.send_message(embed=embed, ephemeral=True)
 
 # ============================================================
 #  SLASH — BACKUP / RESTORE
@@ -610,25 +1098,13 @@ async def cmd_backup_restore(interaction: discord.Interaction, user_id: str):
         return
     await interaction.response.defer(ephemeral=True)
     result = await add_member_to_guild(int(user_id), interaction.guild.id)
-    colors = {
-        "added":         discord.Color.green(),
-        "already":       discord.Color.blue(),
-        "no_token":      discord.Color.red(),
-        "token_expired": discord.Color.orange(),
-        "error":         discord.Color.red(),
-    }
-    icons = {
-        "added":         "✅",
-        "already":       "ℹ️",
-        "no_token":      "❌",
-        "token_expired": "⚠️",
-        "error":         "❌",
-    }
-    embed = discord.Embed(
+    colors = {"added": discord.Color.green(), "already": discord.Color.blue(),
+              "no_token": discord.Color.red(), "token_expired": discord.Color.orange(), "error": discord.Color.red()}
+    icons  = {"added": "✅", "already": "ℹ️", "no_token": "❌", "token_expired": "⚠️", "error": "❌"}
+    embed  = discord.Embed(
         title=f"{icons[result['status']]} Backup Restore",
         description=f"**User:** <@{user_id}>\n**Result:** {result['detail']}",
-        color=colors[result["status"]],
-        timestamp=datetime.now(timezone.utc)
+        color=colors[result["status"]], timestamp=datetime.now(timezone.utc)
     )
     await interaction.followup.send(embed=embed, ephemeral=True)
 
@@ -648,24 +1124,17 @@ async def cmd_backup_restore_all(interaction: discord.Interaction):
     for uid, info in verified_data.items():
         result = await add_member_to_guild(int(uid), interaction.guild.id)
         name   = info.get("username", uid)
-        if result["status"] == "added":
-            added.append(name)
-        elif result["status"] == "already":
-            already.append(name)
-        elif result["status"] == "token_expired":
-            expired.append(name)
-        else:
-            failed.append(f"{name} — {result['detail']}")
+        if result["status"] == "added":           added.append(name)
+        elif result["status"] == "already":       already.append(name)
+        elif result["status"] == "token_expired": expired.append(name)
+        else:                                     failed.append(f"{name} — {result['detail']}")
         await asyncio.sleep(0.5)
 
     def fmt_list(lst, limit=20):
-        if not lst:
-            return "—"
-        shown = lst[:limit]
-        extra = len(lst) - limit
+        if not lst: return "—"
+        shown = lst[:limit]; extra = len(lst) - limit
         text  = ", ".join(f"`{x}`" for x in shown)
-        if extra > 0:
-            text += f" *+{extra} more*"
+        if extra > 0: text += f" *+{extra} more*"
         return text
 
     embed = discord.Embed(
@@ -675,8 +1144,7 @@ async def cmd_backup_restore_all(interaction: discord.Interaction):
                      f"ℹ️ **Already in server ({len(already)}):** {fmt_list(already)}\n\n"
                      f"⚠️ **Token expired ({len(expired)}):** {fmt_list(expired)}\n\n"
                      f"❌ **Failed ({len(failed)}):** {fmt_list(failed)}"),
-        color=VALORA_COLOR,
-        timestamp=datetime.now(timezone.utc)
+        color=VALORA_COLOR, timestamp=datetime.now(timezone.utc)
     )
     embed.set_footer(text=f"Restore completed • {datetime.now(timezone.utc).strftime('%d/%m/%Y %H:%M')} UTC")
     await interaction.followup.send(embed=embed, ephemeral=True)
@@ -701,18 +1169,14 @@ async def cmd_backup_list(interaction: discord.Interaction):
     chunks, chunk, length = [], [], 0
     for line in lines:
         if length + len(line) > 3800:
-            chunks.append(chunk)
-            chunk, length = [line], len(line)
+            chunks.append(chunk); chunk, length = [line], len(line)
         else:
-            chunk.append(line)
-            length += len(line)
-    if chunk:
-        chunks.append(chunk)
+            chunk.append(line); length += len(line)
+    if chunk: chunks.append(chunk)
     for i, ch in enumerate(chunks):
         embed = discord.Embed(
             title=f"📦 Backup List {'(cont.)' if i > 0 else ''}",
-            description="\n".join(ch),
-            color=VALORA_COLOR
+            description="\n".join(ch), color=VALORA_COLOR
         )
         if i == 0:
             embed.set_footer(text=f"Total: {len(verified_data)} users in backup")
@@ -738,8 +1202,7 @@ async def cmd_backup_stats(interaction: discord.Interaction):
                      f"⚠️ **Expired tokens:** `{expired}` *(users need to re-verify)*\n"
                      f"📤 **Left server:** `{left}`\n\n"
                      f"💡 *Use `/backup_restore_all` to restore everyone to this server.*"),
-        color=VALORA_COLOR,
-        timestamp=datetime.now(timezone.utc)
+        color=VALORA_COLOR, timestamp=datetime.now(timezone.utc)
     )
     embed.set_footer(text="Valora Store • Member Backup System")
     await interaction.response.send_message(embed=embed, ephemeral=True)
