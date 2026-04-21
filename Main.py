@@ -498,7 +498,7 @@ async def cmd_verifypanel(interaction: discord.Interaction):
     if not is_admin(interaction.user):
         await interaction.response.send_message("❌ Admin only.", ephemeral=True); return
     await interaction.response.defer(ephemeral=True)
-    redirect_uri = f"{WEB_BASE_URL}/callback"
+    &redirect_uri={redirect_uri}
     oauth_url = (
         f"https://discord.com/oauth2/authorize"
         f"?client_id={CLIENT_ID}"
