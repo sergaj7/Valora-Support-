@@ -16,7 +16,7 @@ load_dotenv()
 CLIENT_ID     = os.getenv("DISCORD_CLIENT_ID", "")
 CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET", "")
 WEB_BASE_URL  = os.getenv("WEB_BASE_URL", "http://localhost:5000")
-redirect_uri=https%3A%2F%2Fvalora-support-production.up.railway.app%2Fcallback
+redirect_uri = "https://valora-support-production.up.railway.app/callback"
 VERIFIED_FILE = "verified.json"
 
 app = Flask(__name__)
