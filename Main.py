@@ -517,20 +517,20 @@ print("WEB_BASE_URL =", WEB_BASE_URL)
 print("redirect_uri =", redirect_uri)
 print("oauth_url =", oauth_url)
 
-    embed = discord.Embed(
-        title="🔐 Valora Verification",
-        description=(
-            "**Verify your Discord account to gain full access.**\n\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-            "🔒 **Why verify?**\n"
-            "Keeps our server safe from bots and raiders.\n\n"
-            "✅ **What happens?**\n"
-            "You receive the **Verified** role and unlock all channels.\n\n"
-            "🌐 **How?**\n"
-            "Click the button — log in with Discord on our secure page.\n\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━\n"
-            "*We do not store your password or personal data.*"
-        ),
+embed = discord.Embed(
+    title="🔐 Valora Verification",
+    description=(
+        "**Verify your Discord account to gain full access.**\n\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "🔒 **Why verify?**\n"
+        "Keeps our server safe from bots and raiders.\n\n"
+        "✅ **What happens?**\n"
+        "You receive the **Verified** role and unlock all channels.\n\n"
+        "🌐 **How?**\n"
+        "Click the button — log in with Discord on our secure page.\n\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "*We do not store your password or personal data.*"
+    ),
         color=VALORA_COLOR, timestamp=datetime.now(timezone.utc)
     )
     set_logo(embed)
