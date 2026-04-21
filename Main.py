@@ -25,7 +25,7 @@ TRANSCRIPT_CHANNEL_ID = int(os.getenv("TRANSCRIPT_CHANNEL_ID", 0))
 STAFF_ROLE_IDS        = [int(x) for x in os.getenv("STAFF_ROLE_IDS", "").split(",") if x.strip().isdigit()]
 ADMIN_ROLE_IDS        = [int(x) for x in os.getenv("ADMIN_ROLE_IDS", "").split(",") if x.strip().isdigit()]
 AUTO_CLOSE_HOURS      = int(os.getenv("AUTO_CLOSE_HOURS", 24))
-VALORA_LOGO           = os.getenv("VALORA_LOGO", "")
+VALORA_LOGO           = os.getenv("VALORA_LOGO", "").strip()
 VALORA_WEBSITE        = "https://valora-store.mysellauth.com/"
 VALORA_COLOR          = 0x00BFFF
 
@@ -42,6 +42,14 @@ TICKET_CATEGORIES = {
     "hwid":     {"label": "HWID Reset",              "description": "Request a reset for your key.",       "emoji": "🔒", "color": 0xFF6B35},
     "support":  {"label": "Get Support",             "description": "Request support from our staff.",     "emoji": "🎫", "color": 0x9B59B6},
 }
+
+# ============================================================
+#  LOGO HELPER
+# ============================================================
+def set_logo(embed: discord.Embed):
+    """Safely set thumbnail only if VALORA_LOGO is a valid URL."""
+    if VALORA_LOGO and VALORA_LOGO.startswith("https://"):
+        embed.set_thumbnail(url=VALORA_LOGO)
 
 # ============================================================
 #  STORAGE
@@ -79,10 +87,6 @@ def is_admin(member: discord.Member) -> bool:
 #  GUILD JOIN HELPER  (core backup function)
 # ============================================================
 async def add_member_to_guild(user_id: int, guild_id: int, role_ids: list[int] = None) -> dict:
-    """
-    Adds a user to a guild using their saved OAuth2 access_token.
-    Returns: {"status": "added"|"already"|"no_token"|"token_expired"|"error", "detail": str}
-    """
     uid  = str(user_id)
     info = verified_data.get(uid)
 
@@ -106,7 +110,6 @@ async def add_member_to_guild(user_id: int, guild_id: int, role_ids: list[int] =
             elif resp.status == 200:
                 return {"status": "already", "detail": "User is already in the server."}
             elif resp.status == 401:
-                # Token expired — mark it
                 verified_data[uid]["token_expired"] = True
                 save_json(VERIFIED_FILE, verified_data)
                 return {"status": "token_expired", "detail": "Access token has expired. User needs to re-verify."}
@@ -156,7 +159,7 @@ def generate_transcript(channel, messages, guild):
         av_html  = f'<img src="{av}" class="av" alt="av">'  if not same else '<div class="avs"></div>'
         hdr_html = f'<div class="mh"><span class="un">{msg.author.display_name}</span>{bdg}<span class="ts">{ts}</span></div>' if not same else ""
         msgs_html += f'<div class="mg{"" if not same else " sa"}">{av_html}<div class="mc">{hdr_html}<div class="mt">{txt}</div>{att}{emb}</div></div>'
-    logo_html = f'<img src="{VALORA_LOGO}" class="hl" alt="Valora" onerror="this.style.display=\'none\'">' if VALORA_LOGO else ""
+    logo_html = f'<img src="{VALORA_LOGO}" class="hl" alt="Valora" onerror="this.style.display=\'none\'">' if VALORA_LOGO and VALORA_LOGO.startswith("https://") else ""
     return f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Transcript — {channel.name}</title>
 <style>:root{{--bg:#0d0f14;--s1:#13161e;--s2:#1a1e2a;--br:#1e2333;--bl:#00BFFF;--tx:#e0e6f0;--mu:#6b7590;--sg:#00e5a0;--ow:#FFD700;--bt:#5865F2}}
 *{{box-sizing:border-box;margin:0;padding:0}}body{{background:var(--bg);color:var(--tx);font-family:'Inter',sans-serif;font-size:14px;line-height:1.6}}
@@ -264,7 +267,7 @@ class TicketSelect(discord.ui.Select):
                          "Please describe your issue and we'll get back to you as soon as possible."),
             color=cat["color"], timestamp=datetime.now(timezone.utc)
         )
-        if VALORA_LOGO: embed.set_thumbnail(url=VALORA_LOGO)
+        set_logo(embed)
         embed.set_footer(text="Valora Store • Premium Products")
         await channel.send(content=interaction.user.mention, embed=embed, view=TicketControlView())
 
@@ -384,10 +387,6 @@ async def on_message(message: discord.Message):
 
 @bot.event
 async def on_member_remove(member: discord.Member):
-    """
-    Wenn ein Member den Server verlässt → speichere es in verified_data
-    damit wir wissen wer fehlt beim nächsten Backup-Restore.
-    """
     uid = str(member.id)
     if uid in verified_data:
         verified_data[uid]["last_left_guild"] = str(member.guild.id)
@@ -415,7 +414,7 @@ async def cmd_panel(interaction: discord.Interaction):
                      "━━━━━━━━━━━━━━━━━━━━━━━\n*Select a category from the dropdown below.*"),
         color=VALORA_COLOR, timestamp=datetime.now(timezone.utc)
     )
-    if VALORA_LOGO: embed.set_thumbnail(url=VALORA_LOGO)
+    set_logo(embed)
     embed.set_footer(text="Valora Store • Premium Products 💎")
     await interaction.response.send_message("✅ Panel sent!", ephemeral=True)
     await interaction.channel.send(embed=embed, view=TicketPanelView())
@@ -438,7 +437,7 @@ async def cmd_store(interaction: discord.Interaction):
                      "━━━━━━━━━━━━━━━━━━━━━━━\n*Questions? Open a support ticket!*"),
         color=VALORA_COLOR, timestamp=datetime.now(timezone.utc)
     )
-    if VALORA_LOGO: embed.set_thumbnail(url=VALORA_LOGO)
+    set_logo(embed)
     embed.set_footer(text="Valora Store • Premium Products 💎")
     await interaction.response.send_message("✅ Store panel sent!", ephemeral=True)
     await interaction.channel.send(embed=embed, view=StoreView())
@@ -521,7 +520,7 @@ async def cmd_verifypanel(interaction: discord.Interaction):
         ),
         color=VALORA_COLOR, timestamp=datetime.now(timezone.utc)
     )
-    if VALORA_LOGO: embed.set_thumbnail(url=VALORA_LOGO)
+    set_logo(embed)
     embed.set_footer(text="Valora Store • Secure Verification 🔐")
     await interaction.response.send_message("✅ Verify panel sent!", ephemeral=True)
     await interaction.channel.send(embed=embed, view=VerifyView(oauth_url))
@@ -533,10 +532,6 @@ async def cmd_verifypanel(interaction: discord.Interaction):
 @app_commands.describe(user_id="Discord User ID of the person to restore")
 @app_commands.guild_only()
 async def cmd_backup_restore(interaction: discord.Interaction, user_id: str):
-    """
-    Re-adds one specific user to the current server using their saved token.
-    Use this after a ban/kick or if someone left and wants back in.
-    """
     if not is_admin(interaction.user):
         await interaction.response.send_message("❌ Admin only.", ephemeral=True); return
     if not user_id.strip().isdigit():
@@ -562,10 +557,6 @@ async def cmd_backup_restore(interaction: discord.Interaction, user_id: str):
 @bot.tree.command(name="backup_restore_all", description="Restore ALL verified users back to this server (Admin only)")
 @app_commands.guild_only()
 async def cmd_backup_restore_all(interaction: discord.Interaction):
-    """
-    Loops through every saved verified user and adds them back to the current server.
-    Perfect after a server nuke or accidental mass-kick.
-    """
     if not is_admin(interaction.user):
         await interaction.response.send_message("❌ Admin only.", ephemeral=True); return
     if not verified_data:
@@ -592,7 +583,7 @@ async def cmd_backup_restore_all(interaction: discord.Interaction):
         else:
             failed.append(f"{name} — {result['detail']}")
 
-        await asyncio.sleep(0.5)   # Rate limit safety
+        await asyncio.sleep(0.5)
 
     def fmt_list(lst, limit=20):
         if not lst: return "—"
@@ -634,7 +625,6 @@ async def cmd_backup_list(interaction: discord.Interaction):
         left    = " 📤 left server"   if info.get("left_at")       else ""
         lines.append(f"• `{name}` (<@{uid}>) — {date}{expired}{left}")
 
-    # Split into chunks if too long
     chunks = []
     chunk  = []
     length = 0
