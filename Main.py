@@ -503,7 +503,7 @@ async def cmd_verifypanel(interaction: discord.Interaction):
 
     await interaction.response.defer(ephemeral=True)
 
-    redirect_uri = f"{WEB_BASE_URL}/callback"
+    redirect_uri = "https://valora-support-production.up.railway.app/callback"
     encoded_redirect = urllib.parse.quote(redirect_uri, safe="")
 
     oauth_url = (
