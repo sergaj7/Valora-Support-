@@ -534,123 +534,223 @@ embed = discord.Embed(
         color=VALORA_COLOR, timestamp=datetime.now(timezone.utc)
     )
     set_logo(embed)
-    embed.set_footer(text="Valora Store • Secure Verification 🔐")
-    await interaction.channel.send(embed=embed, view=VerifyView(oauth_url))
-    await interaction.followup.send("✅ Verify panel sent!", ephemeral=True)
+embed.set_footer(text="Valora Store • Secure Verification 🔐")
+
+await interaction.channel.send(embed=embed, view=VerifyView(oauth_url))
+await interaction.followup.send("✅ Verify panel sent!", ephemeral=True)
+
 
 # ============================================================
 #  SLASH — BACKUP / RESTORE
 # ============================================================
+
 @bot.tree.command(name="backup_restore", description="Restore a single user back to this server (Admin only)")
 @app_commands.describe(user_id="Discord User ID of the person to restore")
 @app_commands.guild_only()
 async def cmd_backup_restore(interaction: discord.Interaction, user_id: str):
+
     if not is_admin(interaction.user):
-        await interaction.response.send_message("❌ Admin only.", ephemeral=True); return
+        await interaction.response.send_message("❌ Admin only.", ephemeral=True)
+        return
+
     if not user_id.strip().isdigit():
-        await interaction.response.send_message("❌ Invalid user ID.", ephemeral=True); return
+        await interaction.response.send_message("❌ Invalid user ID.", ephemeral=True)
+        return
+
     await interaction.response.defer(ephemeral=True)
+
     result = await add_member_to_guild(int(user_id), interaction.guild.id)
-    colors = {"added": discord.Color.green(), "already": discord.Color.blue(),
-              "no_token": discord.Color.red(), "token_expired": discord.Color.orange(),
-              "error": discord.Color.red()}
-    icons  = {"added": "✅", "already": "ℹ️", "no_token": "❌", "token_expired": "⚠️", "error": "❌"}
+
+    colors = {
+        "added": discord.Color.green(),
+        "already": discord.Color.blue(),
+        "no_token": discord.Color.red(),
+        "token_expired": discord.Color.orange(),
+        "error": discord.Color.red()
+    }
+
+    icons = {
+        "added": "✅",
+        "already": "ℹ️",
+        "no_token": "❌",
+        "token_expired": "⚠️",
+        "error": "❌"
+    }
+
     embed = discord.Embed(
         title=f"{icons[result['status']]} Backup Restore",
         description=f"**User:** <@{user_id}>\n**Result:** {result['detail']}",
-        color=colors[result["status"]], timestamp=datetime.now(timezone.utc)
+        color=colors[result["status"]],
+        timestamp=datetime.now(timezone.utc)
     )
+
     await interaction.followup.send(embed=embed, ephemeral=True)
+
+
+# ============================================================
+#  BACKUP RESTORE ALL
+# ============================================================
 
 @bot.tree.command(name="backup_restore_all", description="Restore ALL verified users back to this server (Admin only)")
 @app_commands.guild_only()
 async def cmd_backup_restore_all(interaction: discord.Interaction):
+
     if not is_admin(interaction.user):
-        await interaction.response.send_message("❌ Admin only.", ephemeral=True); return
+        await interaction.response.send_message("❌ Admin only.", ephemeral=True)
+        return
+
     if not verified_data:
-        await interaction.response.send_message("📭 No verified users in backup.", ephemeral=True); return
+        await interaction.response.send_message("📭 No verified users in backup.", ephemeral=True)
+        return
+
     await interaction.response.defer(ephemeral=True)
-    added = []; already = []; failed = []; expired = []
+
+    added = []
+    already = []
+    failed = []
+    expired = []
+
     total = len(verified_data)
+
     for uid, info in verified_data.items():
         result = await add_member_to_guild(int(uid), interaction.guild.id)
-        name   = info.get("username", uid)
-        if result["status"] == "added":           added.append(name)
-        elif result["status"] == "already":       already.append(name)
-        elif result["status"] == "token_expired": expired.append(name)
-        else:                                     failed.append(f"{name} — {result['detail']}")
+
+        name = info.get("username", uid)
+
+        if result["status"] == "added":
+            added.append(name)
+        elif result["status"] == "already":
+            already.append(name)
+        elif result["status"] == "token_expired":
+            expired.append(name)
+        else:
+            failed.append(f"{name} — {result['detail']}")
+
         await asyncio.sleep(0.5)
 
     def fmt_list(lst, limit=20):
-        if not lst: return "—"
-        shown = lst[:limit]; extra = len(lst) - limit
+        if not lst:
+            return "—"
+        shown = lst[:limit]
+        extra = len(lst) - limit
         text = ", ".join(f"`{x}`" for x in shown)
-        if extra > 0: text += f" *+{extra} more*"
+        if extra > 0:
+            text += f" *+{extra} more*"
         return text
 
     embed = discord.Embed(
         title="📦 Backup Restore — Complete",
-        description=(f"**Total in backup:** {total}\n\n"
-                     f"✅ **Added ({len(added)}):** {fmt_list(added)}\n\n"
-                     f"ℹ️ **Already in server ({len(already)}):** {fmt_list(already)}\n\n"
-                     f"⚠️ **Token expired ({len(expired)}):** {fmt_list(expired)}\n\n"
-                     f"❌ **Failed ({len(failed)}):** {fmt_list(failed)}"),
-        color=VALORA_COLOR, timestamp=datetime.now(timezone.utc)
+        description=(
+            f"**Total in backup:** {total}\n\n"
+            f"✅ **Added ({len(added)}):** {fmt_list(added)}\n\n"
+            f"ℹ️ **Already in server ({len(already)}):** {fmt_list(already)}\n\n"
+            f"⚠️ **Token expired ({len(expired)}):** {fmt_list(expired)}\n\n"
+            f"❌ **Failed ({len(failed)}):** {fmt_list(failed)}"
+        ),
+        color=VALORA_COLOR,
+        timestamp=datetime.now(timezone.utc)
     )
+
     embed.set_footer(text=f"Restore completed • {datetime.now(timezone.utc).strftime('%d/%m/%Y %H:%M')} UTC")
+
     await interaction.followup.send(embed=embed, ephemeral=True)
+
+
+# ============================================================
+#  BACKUP LIST
+# ============================================================
 
 @bot.tree.command(name="backup_list", description="Show all users in the backup (Admin only)")
 @app_commands.guild_only()
 async def cmd_backup_list(interaction: discord.Interaction):
+
     if not is_admin(interaction.user):
-        await interaction.response.send_message("❌ Admin only.", ephemeral=True); return
+        await interaction.response.send_message("❌ Admin only.", ephemeral=True)
+        return
+
     if not verified_data:
-        await interaction.response.send_message("📭 Backup is empty.", ephemeral=True); return
+        await interaction.response.send_message("📭 Backup is empty.", ephemeral=True)
+        return
+
     lines = []
+
     for uid, info in verified_data.items():
-        name    = info.get("username", "unknown")
-        date    = info.get("verified_at", "")[:10]
+        name = info.get("username", "unknown")
+        date = info.get("verified_at", "")[:10]
         expired = " ⚠️ token expired" if info.get("token_expired") else ""
-        left    = " 📤 left server"   if info.get("left_at")       else ""
+        left = " 📤 left server" if info.get("left_at") else ""
+
         lines.append(f"• `{name}` (<@{uid}>) — {date}{expired}{left}")
-    chunks = []; chunk = []; length = 0
+
+    chunks = []
+    chunk = []
+    length = 0
+
     for line in lines:
         if length + len(line) > 3800:
-            chunks.append(chunk); chunk = [line]; length = len(line)
+            chunks.append(chunk)
+            chunk = [line]
+            length = len(line)
         else:
-            chunk.append(line); length += len(line)
-    if chunk: chunks.append(chunk)
+            chunk.append(line)
+            length += len(line)
+
+    if chunk:
+        chunks.append(chunk)
+
     for i, ch in enumerate(chunks):
         embed = discord.Embed(
             title=f"📦 Backup List {'(cont.)' if i > 0 else ''}",
-            description="\n".join(ch), color=VALORA_COLOR
+            description="\n".join(ch),
+            color=VALORA_COLOR
         )
-        if i == 0: embed.set_footer(text=f"Total: {len(verified_data)} users in backup")
-        await interaction.response.send_message(embed=embed, ephemeral=True) if i == 0 else await interaction.followup.send(embed=embed, ephemeral=True)
+
+        if i == 0:
+            embed.set_footer(text=f"Total: {len(verified_data)} users in backup")
+
+        if i == 0:
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+        else:
+            await interaction.followup.send(embed=embed, ephemeral=True)
+
+
+# ============================================================
+#  BACKUP STATS
+# ============================================================
 
 @bot.tree.command(name="backup_stats", description="Show backup statistics (Admin only)")
 @app_commands.guild_only()
 async def cmd_backup_stats(interaction: discord.Interaction):
+
     if not is_admin(interaction.user):
-        await interaction.response.send_message("❌ Admin only.", ephemeral=True); return
-    total   = len(verified_data)
+        await interaction.response.send_message("❌ Admin only.", ephemeral=True)
+        return
+
+    total = len(verified_data)
     expired = sum(1 for v in verified_data.values() if v.get("token_expired"))
-    left    = sum(1 for v in verified_data.values() if v.get("left_at"))
-    active  = total - expired
+    left = sum(1 for v in verified_data.values() if v.get("left_at"))
+    active = total - expired
+
     embed = discord.Embed(
         title="📊 Backup Statistics",
-        description=(f"👥 **Total in backup:** `{total}`\n"
-                     f"✅ **Active tokens:** `{active}`\n"
-                     f"⚠️ **Expired tokens:** `{expired}` *(users need to re-verify)*\n"
-                     f"📤 **Left server:** `{left}`\n\n"
-                     f"💡 *Use `/backup_restore_all` to restore everyone to this server.*"),
-        color=VALORA_COLOR, timestamp=datetime.now(timezone.utc)
+        description=(
+            f"👥 **Total in backup:** `{total}`\n"
+            f"✅ **Active tokens:** `{active}`\n"
+            f"⚠️ **Expired tokens:** `{expired}` *(users need to re-verify)*\n"
+            f"📤 **Left server:** `{left}`\n\n"
+            f"💡 *Use `/backup_restore_all` to restore everyone to this server.*"
+        ),
+        color=VALORA_COLOR,
+        timestamp=datetime.now(timezone.utc)
     )
+
     embed.set_footer(text="Valora Store • Member Backup System")
+
     await interaction.response.send_message(embed=embed, ephemeral=True)
+
 
 # ============================================================
 #  RUN
 # ============================================================
+
 bot.run(TOKEN)
