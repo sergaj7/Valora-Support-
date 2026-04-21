@@ -522,8 +522,9 @@ async def cmd_verifypanel(interaction: discord.Interaction):
     )
     set_logo(embed)
     embed.set_footer(text="Valora Store • Secure Verification 🔐")
-    await interaction.response.send_message("✅ Verify panel sent!", ephemeral=True)
-    await interaction.channel.send(embed=embed, view=VerifyView(oauth_url))
+    await interaction.response.defer(ephemeral=True)
+await interaction.channel.send(embed=embed, view=VerifyView(oauth_url))
+await interaction.followup.send("✅ Verify panel sent!", ephemeral=True)
 
 # ============================================================
 #  SLASH — BACKUP / RESTORE
