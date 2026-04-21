@@ -12,6 +12,7 @@ import io
 import aiohttp
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
+import urllib.parse
 
 load_dotenv()
 
@@ -496,15 +497,20 @@ async def cmd_autoclose(interaction: discord.Interaction, enabled: bool):
 @app_commands.guild_only()
 async def cmd_verifypanel(interaction: discord.Interaction):
     if not is_admin(interaction.user):
-        await interaction.response.send_message("❌ Admin only.", ephemeral=True); return
+        await interaction.response.send_message("❌ Admin only.", ephemeral=True)
+        return
+
     await interaction.response.defer(ephemeral=True)
-    &redirect_uri={redirect_uri}
+
+    redirect_uri = f"{WEB_BASE_URL}/callback"
+    encoded_redirect = urllib.parse.quote(redirect_uri, safe="")
+
     oauth_url = (
-        f"https://discord.com/oauth2/authorize"
+        "https://discord.com/oauth2/authorize"
         f"?client_id={CLIENT_ID}"
-        f"&redirect_uri={redirect_uri}"
-        f"&response_type=code"
-        f"&scope=identify%20guilds.join"
+        f"&redirect_uri={encoded_redirect}"
+        "&response_type=code"
+        "&scope=identify%20guilds.join"
     )
     embed = discord.Embed(
         title="🔐 Valora Verification",
