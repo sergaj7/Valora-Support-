@@ -503,15 +503,19 @@ async def cmd_verifypanel(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
 
     redirect_uri = f"{WEB_BASE_URL}/callback"
-    encoded_redirect = urllib.parse.quote(redirect_uri, safe="")
+encoded_redirect = urllib.parse.quote(redirect_uri, safe="")
 
-    oauth_url = (
-        "https://discord.com/oauth2/authorize"
-        f"?client_id={CLIENT_ID}"
-        f"&redirect_uri={encoded_redirect}"
-        "&response_type=code"
-        "&scope=identify%20guilds.join"
-    )
+oauth_url = (
+    "https://discord.com/oauth2/authorize"
+    f"?client_id={CLIENT_ID}"
+    f"&redirect_uri={encoded_redirect}"
+    "&response_type=code"
+    "&scope=identify%20guilds.join"
+)
+
+print("WEB_BASE_URL =", WEB_BASE_URL)
+print("redirect_uri =", redirect_uri)
+print("oauth_url =", oauth_url)
     embed = discord.Embed(
         title="🔐 Valora Verification",
         description=(
