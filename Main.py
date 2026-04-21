@@ -533,7 +533,7 @@ embed = discord.Embed(
     ),
         color=VALORA_COLOR, timestamp=datetime.now(timezone.utc)
     )
-    set_logo(embed)
+set_logo(embed)
 embed.set_footer(text="Valora Store • Secure Verification 🔐")
 
 await interaction.channel.send(embed=embed, view=VerifyView(oauth_url))
