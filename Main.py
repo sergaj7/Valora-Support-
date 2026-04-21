@@ -516,6 +516,7 @@ oauth_url = (
 print("WEB_BASE_URL =", WEB_BASE_URL)
 print("redirect_uri =", redirect_uri)
 print("oauth_url =", oauth_url)
+
     embed = discord.Embed(
         title="🔐 Valora Verification",
         description=(
