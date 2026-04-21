@@ -47,7 +47,6 @@ TICKET_CATEGORIES = {
 #  LOGO HELPER
 # ============================================================
 def set_logo(embed: discord.Embed):
-    """Safely set thumbnail only if VALORA_LOGO is a valid URL."""
     if VALORA_LOGO and VALORA_LOGO.startswith("https://"):
         embed.set_thumbnail(url=VALORA_LOGO)
 
@@ -84,7 +83,7 @@ def is_admin(member: discord.Member) -> bool:
     return any(r.id in ADMIN_ROLE_IDS for r in member.roles)
 
 # ============================================================
-#  GUILD JOIN HELPER  (core backup function)
+#  GUILD JOIN HELPER
 # ============================================================
 async def add_member_to_guild(user_id: int, guild_id: int, role_ids: list[int] = None) -> dict:
     uid  = str(user_id)
@@ -402,6 +401,7 @@ async def on_member_remove(member: discord.Member):
 async def cmd_panel(interaction: discord.Interaction):
     if not is_admin(interaction.user):
         await interaction.response.send_message("❌ Admin only.", ephemeral=True); return
+    await interaction.response.defer(ephemeral=True)
     embed = discord.Embed(
         title="🎫 Valora Support Tickets",
         description=("**Need help? Open a ticket below!**\n\n"
@@ -416,14 +416,15 @@ async def cmd_panel(interaction: discord.Interaction):
     )
     set_logo(embed)
     embed.set_footer(text="Valora Store • Premium Products 💎")
-    await interaction.response.send_message("✅ Panel sent!", ephemeral=True)
     await interaction.channel.send(embed=embed, view=TicketPanelView())
+    await interaction.followup.send("✅ Panel sent!", ephemeral=True)
 
 @bot.tree.command(name="store", description="Send the Valora store panel (Admin only)")
 @app_commands.guild_only()
 async def cmd_store(interaction: discord.Interaction):
     if not is_admin(interaction.user):
         await interaction.response.send_message("❌ Admin only.", ephemeral=True); return
+    await interaction.response.defer(ephemeral=True)
     embed = discord.Embed(
         title="💎 VALORA STORE",
         description=("**Welcome to Valora — Premium Products & Services**\n\n"
@@ -439,8 +440,8 @@ async def cmd_store(interaction: discord.Interaction):
     )
     set_logo(embed)
     embed.set_footer(text="Valora Store • Premium Products 💎")
-    await interaction.response.send_message("✅ Store panel sent!", ephemeral=True)
     await interaction.channel.send(embed=embed, view=StoreView())
+    await interaction.followup.send("✅ Store panel sent!", ephemeral=True)
 
 @bot.tree.command(name="close", description="Close the current ticket (Staff only)")
 @app_commands.guild_only()
@@ -496,6 +497,7 @@ async def cmd_autoclose(interaction: discord.Interaction, enabled: bool):
 async def cmd_verifypanel(interaction: discord.Interaction):
     if not is_admin(interaction.user):
         await interaction.response.send_message("❌ Admin only.", ephemeral=True); return
+    await interaction.response.defer(ephemeral=True)
     redirect_uri = f"{WEB_BASE_URL}/callback"
     oauth_url = (
         f"https://discord.com/oauth2/authorize"
@@ -522,9 +524,8 @@ async def cmd_verifypanel(interaction: discord.Interaction):
     )
     set_logo(embed)
     embed.set_footer(text="Valora Store • Secure Verification 🔐")
-    await interaction.response.defer(ephemeral=True)
-await interaction.channel.send(embed=embed, view=VerifyView(oauth_url))
-await interaction.followup.send("✅ Verify panel sent!", ephemeral=True)
+    await interaction.channel.send(embed=embed, view=VerifyView(oauth_url))
+    await interaction.followup.send("✅ Verify panel sent!", ephemeral=True)
 
 # ============================================================
 #  SLASH — BACKUP / RESTORE
@@ -537,23 +538,18 @@ async def cmd_backup_restore(interaction: discord.Interaction, user_id: str):
         await interaction.response.send_message("❌ Admin only.", ephemeral=True); return
     if not user_id.strip().isdigit():
         await interaction.response.send_message("❌ Invalid user ID.", ephemeral=True); return
-
     await interaction.response.defer(ephemeral=True)
     result = await add_member_to_guild(int(user_id), interaction.guild.id)
-
     colors = {"added": discord.Color.green(), "already": discord.Color.blue(),
               "no_token": discord.Color.red(), "token_expired": discord.Color.orange(),
               "error": discord.Color.red()}
     icons  = {"added": "✅", "already": "ℹ️", "no_token": "❌", "token_expired": "⚠️", "error": "❌"}
-
     embed = discord.Embed(
         title=f"{icons[result['status']]} Backup Restore",
         description=f"**User:** <@{user_id}>\n**Result:** {result['detail']}",
-        color=colors[result["status"]],
-        timestamp=datetime.now(timezone.utc)
+        color=colors[result["status"]], timestamp=datetime.now(timezone.utc)
     )
     await interaction.followup.send(embed=embed, ephemeral=True)
-
 
 @bot.tree.command(name="backup_restore_all", description="Restore ALL verified users back to this server (Admin only)")
 @app_commands.guild_only()
@@ -562,53 +558,36 @@ async def cmd_backup_restore_all(interaction: discord.Interaction):
         await interaction.response.send_message("❌ Admin only.", ephemeral=True); return
     if not verified_data:
         await interaction.response.send_message("📭 No verified users in backup.", ephemeral=True); return
-
     await interaction.response.defer(ephemeral=True)
-
-    added    = []
-    already  = []
-    failed   = []
-    expired  = []
-
+    added = []; already = []; failed = []; expired = []
     total = len(verified_data)
     for uid, info in verified_data.items():
         result = await add_member_to_guild(int(uid), interaction.guild.id)
         name   = info.get("username", uid)
-
-        if result["status"] == "added":
-            added.append(name)
-        elif result["status"] == "already":
-            already.append(name)
-        elif result["status"] == "token_expired":
-            expired.append(name)
-        else:
-            failed.append(f"{name} — {result['detail']}")
-
+        if result["status"] == "added":           added.append(name)
+        elif result["status"] == "already":       already.append(name)
+        elif result["status"] == "token_expired": expired.append(name)
+        else:                                     failed.append(f"{name} — {result['detail']}")
         await asyncio.sleep(0.5)
 
     def fmt_list(lst, limit=20):
         if not lst: return "—"
-        shown = lst[:limit]
-        extra = len(lst) - limit
-        text  = ", ".join(f"`{x}`" for x in shown)
+        shown = lst[:limit]; extra = len(lst) - limit
+        text = ", ".join(f"`{x}`" for x in shown)
         if extra > 0: text += f" *+{extra} more*"
         return text
 
     embed = discord.Embed(
         title="📦 Backup Restore — Complete",
-        description=(
-            f"**Total in backup:** {total}\n\n"
-            f"✅ **Added ({len(added)}):** {fmt_list(added)}\n\n"
-            f"ℹ️ **Already in server ({len(already)}):** {fmt_list(already)}\n\n"
-            f"⚠️ **Token expired ({len(expired)}):** {fmt_list(expired)}\n\n"
-            f"❌ **Failed ({len(failed)}):** {fmt_list(failed)}"
-        ),
-        color=VALORA_COLOR,
-        timestamp=datetime.now(timezone.utc)
+        description=(f"**Total in backup:** {total}\n\n"
+                     f"✅ **Added ({len(added)}):** {fmt_list(added)}\n\n"
+                     f"ℹ️ **Already in server ({len(already)}):** {fmt_list(already)}\n\n"
+                     f"⚠️ **Token expired ({len(expired)}):** {fmt_list(expired)}\n\n"
+                     f"❌ **Failed ({len(failed)}):** {fmt_list(failed)}"),
+        color=VALORA_COLOR, timestamp=datetime.now(timezone.utc)
     )
     embed.set_footer(text=f"Restore completed • {datetime.now(timezone.utc).strftime('%d/%m/%Y %H:%M')} UTC")
     await interaction.followup.send(embed=embed, ephemeral=True)
-
 
 @bot.tree.command(name="backup_list", description="Show all users in the backup (Admin only)")
 @app_commands.guild_only()
@@ -617,7 +596,6 @@ async def cmd_backup_list(interaction: discord.Interaction):
         await interaction.response.send_message("❌ Admin only.", ephemeral=True); return
     if not verified_data:
         await interaction.response.send_message("📭 Backup is empty.", ephemeral=True); return
-
     lines = []
     for uid, info in verified_data.items():
         name    = info.get("username", "unknown")
@@ -625,58 +603,41 @@ async def cmd_backup_list(interaction: discord.Interaction):
         expired = " ⚠️ token expired" if info.get("token_expired") else ""
         left    = " 📤 left server"   if info.get("left_at")       else ""
         lines.append(f"• `{name}` (<@{uid}>) — {date}{expired}{left}")
-
-    chunks = []
-    chunk  = []
-    length = 0
+    chunks = []; chunk = []; length = 0
     for line in lines:
         if length + len(line) > 3800:
-            chunks.append(chunk)
-            chunk  = [line]
-            length = len(line)
+            chunks.append(chunk); chunk = [line]; length = len(line)
         else:
-            chunk.append(line)
-            length += len(line)
-    if chunk:
-        chunks.append(chunk)
-
+            chunk.append(line); length += len(line)
+    if chunk: chunks.append(chunk)
     for i, ch in enumerate(chunks):
         embed = discord.Embed(
             title=f"📦 Backup List {'(cont.)' if i > 0 else ''}",
-            description="\n".join(ch),
-            color=VALORA_COLOR
+            description="\n".join(ch), color=VALORA_COLOR
         )
-        if i == 0:
-            embed.set_footer(text=f"Total: {len(verified_data)} users in backup")
+        if i == 0: embed.set_footer(text=f"Total: {len(verified_data)} users in backup")
         await interaction.response.send_message(embed=embed, ephemeral=True) if i == 0 else await interaction.followup.send(embed=embed, ephemeral=True)
-
 
 @bot.tree.command(name="backup_stats", description="Show backup statistics (Admin only)")
 @app_commands.guild_only()
 async def cmd_backup_stats(interaction: discord.Interaction):
     if not is_admin(interaction.user):
         await interaction.response.send_message("❌ Admin only.", ephemeral=True); return
-
     total   = len(verified_data)
     expired = sum(1 for v in verified_data.values() if v.get("token_expired"))
     left    = sum(1 for v in verified_data.values() if v.get("left_at"))
     active  = total - expired
-
     embed = discord.Embed(
         title="📊 Backup Statistics",
-        description=(
-            f"👥 **Total in backup:** `{total}`\n"
-            f"✅ **Active tokens:** `{active}`\n"
-            f"⚠️ **Expired tokens:** `{expired}` *(users need to re-verify)*\n"
-            f"📤 **Left server:** `{left}`\n\n"
-            f"💡 *Use `/backup_restore_all` to restore everyone to this server.*"
-        ),
-        color=VALORA_COLOR,
-        timestamp=datetime.now(timezone.utc)
+        description=(f"👥 **Total in backup:** `{total}`\n"
+                     f"✅ **Active tokens:** `{active}`\n"
+                     f"⚠️ **Expired tokens:** `{expired}` *(users need to re-verify)*\n"
+                     f"📤 **Left server:** `{left}`\n\n"
+                     f"💡 *Use `/backup_restore_all` to restore everyone to this server.*"),
+        color=VALORA_COLOR, timestamp=datetime.now(timezone.utc)
     )
     embed.set_footer(text="Valora Store • Member Backup System")
     await interaction.response.send_message(embed=embed, ephemeral=True)
-
 
 # ============================================================
 #  RUN
