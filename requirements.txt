@@ -1,6 +1,0 @@
-flask
-requests
-python-dotenv
-discord.py
-aiohttp
-gunicorn
