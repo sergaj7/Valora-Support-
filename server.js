@@ -100,7 +100,8 @@ app.get('/api/admin/keys', requireAdmin, async (req, res) => {
 });
 
 app.post('/api/admin/keys', requireAdmin, async (req, res) => {
-    const { id, key, type, user, days, status, expires, prefix } = req.body;
+    const { key, type, user, days, status, expires, prefix } = req.body;
+const id = Date.now().toString() + Math.random().toString(36).slice(2,8);
     const { rows } = await pool.query(
         `INSERT INTO keys (id, key, type, username, days, status, expires, prefix)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
