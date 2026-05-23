@@ -1,5 +1,0 @@
-[build]
-builder = "nixpacks"
-
-[deploy]
-startCommand = "sh -c 'gunicorn web:app --bind 0.0.0.0:$PORT & python Main.py & wait'"
