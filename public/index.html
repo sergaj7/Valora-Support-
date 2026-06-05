@@ -239,6 +239,10 @@ tbody td{padding:14px 20px;font-size:13px;vertical-align:middle}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
         Generate Key
       </div>
+      <div class="nav-item" onclick="showPage('logs')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12h6M9 16h6M9 8h6M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/></svg>
+        Logs
+      </div>
       <div class="nav-section">System</div>
       <div class="nav-item" onclick="showPage('settings')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -273,13 +277,24 @@ tbody td{padding:14px 20px;font-size:13px;vertical-align:middle}
 
     <!-- KEY MANAGER -->
     <div id="page-keys" class="page">
-      <div class="page-header"><h1>Key Manager</h1><p>Manage all license keys</p></div>
+      <div class="page-header">
+        <h1>Key Manager</h1>
+        <p>Manage all license keys</p>
+      </div>
       <div class="table-wrap">
-        <div class="table-toolbar">
+        <div class="table-toolbar" style="flex-wrap:wrap;gap:10px">
           <h2>All Keys</h2>
           <div class="search-box">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-            <input type="text" id="key-search" placeholder="Search keys, user..." oninput="renderKeyTable()">
+            <input type="text" id="key-search" placeholder="Search key, user..." oninput="renderKeyTable()">
+          </div>
+          <div class="search-box" style="max-width:200px">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            <input type="text" id="hwid-search" placeholder="Filter by HWID..." oninput="renderKeyTable()">
+          </div>
+          <div class="search-box" style="max-width:180px">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            <input type="text" id="ip-search" placeholder="Filter by IP..." oninput="renderKeyTable()">
           </div>
           <select id="status-filter" onchange="renderKeyTable()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:inherit;font-size:13px;outline:none;cursor:pointer">
             <option value="">All Status</option>
@@ -352,6 +367,49 @@ tbody td{padding:14px 20px;font-size:13px;vertical-align:middle}
         </div>
       </div>
     </div>
+
+    <!-- LOGS PAGE -->
+    <div id="page-logs" class="page">
+      <div class="page-header">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+          <div>
+            <h1>Activity Logs</h1>
+            <p>IP and HWID access logs</p>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span id="logs-refresh-ts" style="font-size:11px;color:var(--muted)"></span>
+            <button class="btn btn-ghost" style="padding:8px 14px;font-size:12px" onclick="loadLogs(true)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              Refresh
+            </button>
+            <button id="logs-autorefresh-btn" class="btn btn-ghost" style="padding:8px 14px;font-size:12px" onclick="toggleLogsAutoRefresh()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              Auto: ON
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <div class="table-toolbar" style="flex-wrap:wrap;gap:10px">
+          <h2>Access Logs</h2>
+          <div class="search-box" style="flex:1;max-width:340px">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input type="text" id="logs-search" placeholder="Search by Key, HWID, or IP..." oninput="filterLogs()">
+          </div>
+          <select id="logs-key-filter" onchange="loadLogs(true)" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:inherit;font-size:13px;outline:none;cursor:pointer">
+            <option value="">All Keys</option>
+          </select>
+          <span id="logs-count" style="font-size:12px;color:var(--muted);white-space:nowrap"></span>
+        </div>
+        <div id="logs-table-wrap"></div>
+        <div id="logs-load-more" style="display:none;padding:20px;text-align:center">
+          <button class="btn btn-ghost" onclick="loadMoreLogs()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            Load More
+          </button>
+        </div>
+      </div>
+    </div>
   </main>
 </div>
 
@@ -417,6 +475,14 @@ let keys = [];
 let currentDaysKeyId = null;
 let confirmCallback = null;
 
+// ── Logs State ────────────────────────────────────────────────────────────
+let allLogs = [];
+let logsOffset = 0;
+let logsAutoRefresh = true;
+let logsAutoRefreshTimer = null;
+let dashAutoRefreshTimer = null;
+let keysAutoRefreshTimer = null;
+
 // ── API ───────────────────────────────────────────────────────────────────
 async function api(method, path, body) {
   const opts = { method, headers: { 'Content-Type': 'application/json' } };
@@ -442,6 +508,7 @@ async function doLogin() {
       document.getElementById('sidebar-user').textContent = u;
       await loadKeys();
       renderStats(); renderKeyTable(); renderRecentTable();
+      startAutoRefresh();
       toast('Welcome back, Admin!', 'success');
     } else {
       err.textContent = 'Invalid credentials. Try again.';
@@ -453,7 +520,8 @@ async function doLogin() {
 }
 
 function doLogout() {
-  adminToken = null; keys = [];
+  adminToken = null; keys = []; allLogs = [];
+  stopAutoRefresh();
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('login-user').value = '';
   document.getElementById('login-pass').value = '';
@@ -464,6 +532,59 @@ async function loadKeys() {
   try {
     keys = await api('GET', '/api/admin/keys');
   } catch(e) { toast('Failed to load keys', 'error'); }
+}
+
+// ── Auto-Refresh ───────────────────────────────────────────────────────────
+function startAutoRefresh() {
+  stopAutoRefresh();
+  // Dashboard + Keys: refresh every 30s
+  dashAutoRefreshTimer = setInterval(async () => {
+    const dashActive = document.getElementById('page-dashboard').classList.contains('active');
+    const keysActive = document.getElementById('page-keys').classList.contains('active');
+    if (dashActive || keysActive) {
+      await loadKeys();
+      if (dashActive) { renderStats(); renderRecentTable(); }
+      if (keysActive) { renderKeyTable(); }
+      updateRefreshTimestamp('keys');
+    }
+  }, 30000);
+}
+
+function stopAutoRefresh() {
+  if (dashAutoRefreshTimer) { clearInterval(dashAutoRefreshTimer); dashAutoRefreshTimer = null; }
+  if (logsAutoRefreshTimer) { clearInterval(logsAutoRefreshTimer); logsAutoRefreshTimer = null; }
+}
+
+function startLogsAutoRefresh() {
+  if (logsAutoRefreshTimer) clearInterval(logsAutoRefreshTimer);
+  logsAutoRefreshTimer = setInterval(() => {
+    if (document.getElementById('page-logs').classList.contains('active')) {
+      loadLogs(true);
+    }
+  }, 30000);
+}
+
+function toggleLogsAutoRefresh() {
+  logsAutoRefresh = !logsAutoRefresh;
+  const btn = document.getElementById('logs-autorefresh-btn');
+  if (logsAutoRefresh) {
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Auto: ON`;
+    startLogsAutoRefresh();
+    toast('Auto-refresh enabled', 'info');
+  } else {
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Auto: OFF`;
+    if (logsAutoRefreshTimer) { clearInterval(logsAutoRefreshTimer); logsAutoRefreshTimer = null; }
+    toast('Auto-refresh disabled', 'info');
+  }
+}
+
+function updateRefreshTimestamp(page) {
+  const now = new Date();
+  const ts = now.toLocaleTimeString();
+  if (page === 'logs') {
+    const el = document.getElementById('logs-refresh-ts');
+    if (el) el.textContent = `Last refresh: ${ts}`;
+  }
 }
 
 // ── Navigation ─────────────────────────────────────────────────────────────
@@ -477,6 +598,11 @@ function showPage(id) {
   if(id==='dashboard'){renderStats();renderRecentTable()}
   if(id==='keys'){renderKeyTable()}
   if(id==='generate'){resetGen()}
+  if(id==='logs'){
+    populateLogsKeyFilter();
+    loadLogs(true);
+    if(logsAutoRefresh) startLogsAutoRefresh();
+  }
 }
 
 // ── Key Generation ─────────────────────────────────────────────────────────
@@ -524,13 +650,28 @@ function renderStats() {
   const frozen  = keys.filter(k => k.status==='frozen').length;
   const banned  = keys.filter(k => k.status==='banned').length;
   const expired = keys.filter(k => k.status==='expired').length;
+  const hwidBound = keys.filter(k => k.hwid && k.hwid !== '').length;
+  const uniqueIPs = new Set(keys.filter(k => k.last_ip && k.last_ip !== '').map(k => k.last_ip)).size;
   document.getElementById('stats-grid').innerHTML = `
     <div class="stat-card"><div class="stat-label">Total Keys</div><div class="stat-num">${total}</div><div class="stat-badge">🔑</div></div>
     <div class="stat-card green"><div class="stat-label">Active</div><div class="stat-num">${active}</div><div class="stat-badge">✅</div></div>
     <div class="stat-card"><div class="stat-label">Frozen</div><div class="stat-num">${frozen}</div><div class="stat-badge">❄️</div></div>
     <div class="stat-card red"><div class="stat-label">Banned</div><div class="stat-num">${banned}</div><div class="stat-badge">🚫</div></div>
     <div class="stat-card yellow"><div class="stat-label">Expired</div><div class="stat-num">${expired}</div><div class="stat-badge">⏱️</div></div>
+    <div class="stat-card" style="border-color:rgba(0,245,255,.2)"><div class="stat-label">HWID Bindings</div><div class="stat-num" style="background:linear-gradient(135deg,#fff,var(--neon));-webkit-background-clip:text;background-clip:text">${hwidBound}</div><div class="stat-badge">🖥️</div></div>
+    <div class="stat-card" style="border-color:rgba(57,255,20,.2)"><div class="stat-label">Unique IPs</div><div class="stat-num" style="background:linear-gradient(135deg,#fff,var(--neon3));-webkit-background-clip:text;background-clip:text">${uniqueIPs}</div><div class="stat-badge">🌐</div></div>
   `;
+}
+
+// ── Time Ago ───────────────────────────────────────────────────────────────
+function timeAgo(dateStr) {
+  if (!dateStr) return '—';
+  const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+  if (diff < 604800) return `${Math.floor(diff/86400)}d ago`;
+  return new Date(dateStr).toLocaleDateString();
 }
 
 // ── Table ──────────────────────────────────────────────────────────────────
@@ -547,6 +688,13 @@ function daysLeft(expires) {
   if(diff<=7) return `<span style="color:var(--warn)">${diff}d</span>`;
   return `<span style="color:var(--muted)">${diff}d</span>`;
 }
+
+function copyBtn(text, label) {
+  return `<button class="btn-icon" title="Copy ${label}" onclick="navigator.clipboard.writeText('${text.replace(/'/g,"\\'")}').then(()=>toast('${label} copied!','info'))" style="padding:4px 6px">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+  </button>`;
+}
+
 function actionsHTML(k) {
   const freeze = k.status==='frozen'
     ? `<button class="btn-icon success" title="Unfreeze" onclick="setStatus('${k.id}','active')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>`
@@ -554,14 +702,51 @@ function actionsHTML(k) {
   const ban = k.status==='banned'
     ? `<button class="btn-icon success" title="Unban" onclick="setStatus('${k.id}','active')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>`
     : `<button class="btn-icon danger" title="Ban" onclick="setStatus('${k.id}','banned')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg></button>`;
+  const copyHwid = k.hwid ? `<button class="btn-icon" title="Copy HWID" onclick="navigator.clipboard.writeText('${k.hwid}').then(()=>toast('HWID copied!','info'))"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></button>` : '';
+  const copyIp = k.last_ip ? `<button class="btn-icon" title="Copy IP" onclick="navigator.clipboard.writeText('${k.last_ip}').then(()=>toast('IP copied!','info'))"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></button>` : '';
   return `<div class="actions">
     <button class="btn-icon" title="Details" onclick="openDetail('${k.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></button>
     <button class="btn-icon" title="Modify Days" onclick="openDaysModal('${k.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></button>
-    ${freeze}${ban}
+    ${freeze}${ban}${copyHwid}${copyIp}
     <button class="btn-icon danger" title="Delete" onclick="deleteKey('${k.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg></button>
   </div>`;
 }
+
 function tableHTML(list) {
+  if(!list.length) return `<div class="empty"><div class="empty-icon">🔍</div><p>No keys found</p></div>`;
+  return `<div style="overflow-x:auto"><table>
+    <thead><tr>
+      <th>Key</th><th>User</th><th>Type</th><th>Status</th><th>Expires</th>
+      <th>HWID</th><th>Last IP</th><th>Last Seen</th><th>Actions</th>
+    </tr></thead>
+    <tbody>${list.map(k=>`<tr>
+      <td><span class="key-mono">${k.key.slice(0,24)}…</span></td>
+      <td>${k.user}</td>
+      <td><span style="font-size:12px;color:var(--muted)">${k.type}</span></td>
+      <td>${badgeHTML(k.status)}</td>
+      <td>${daysLeft(k.expires)}</td>
+      <td><span style="font-family:monospace;font-size:11px;color:var(--neon);opacity:.8">${k.hwid ? k.hwid.slice(0,16)+'…' : '<span style="color:var(--muted)">—</span>'}</span></td>
+      <td><span style="font-size:12px;color:var(--muted)">${k.last_ip || '<span style="color:var(--muted)">—</span>'}</span></td>
+      <td><span style="font-size:12px;color:var(--muted)">${timeAgo(k.last_seen)}</span></td>
+      <td>${actionsHTML(k)}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+function renderKeyTable() {
+  const q   = (document.getElementById('key-search')||{}).value||'';
+  const sf  = (document.getElementById('status-filter')||{}).value||'';
+  const hq  = (document.getElementById('hwid-search')||{}).value||'';
+  const iq  = (document.getElementById('ip-search')||{}).value||'';
+  let list = keys;
+  if(q)  list = list.filter(k => k.key.toLowerCase().includes(q.toLowerCase()) || k.user.toLowerCase().includes(q.toLowerCase()));
+  if(sf) list = list.filter(k => k.status===sf);
+  if(hq) list = list.filter(k => k.hwid && k.hwid.toLowerCase().includes(hq.toLowerCase()));
+  if(iq) list = list.filter(k => k.last_ip && k.last_ip.toLowerCase().includes(iq.toLowerCase()));
+  document.getElementById('key-table-wrap').innerHTML = tableHTML(list);
+}
+
+function recentTableHTML(list) {
   if(!list.length) return `<div class="empty"><div class="empty-icon">🔍</div><p>No keys found</p></div>`;
   return `<table>
     <thead><tr><th>Key</th><th>User</th><th>Type</th><th>Status</th><th>Expires</th><th>Actions</th></tr></thead>
@@ -575,16 +760,9 @@ function tableHTML(list) {
     </tr>`).join('')}</tbody>
   </table>`;
 }
-function renderKeyTable() {
-  const q  = (document.getElementById('key-search')||{}).value||'';
-  const sf = (document.getElementById('status-filter')||{}).value||'';
-  let list = keys;
-  if(q)  list = list.filter(k => k.key.toLowerCase().includes(q.toLowerCase()) || k.user.toLowerCase().includes(q.toLowerCase()));
-  if(sf) list = list.filter(k => k.status===sf);
-  document.getElementById('key-table-wrap').innerHTML = tableHTML(list);
-}
+
 function renderRecentTable() {
-  document.getElementById('recent-table-wrap').innerHTML = tableHTML(keys.slice(0,6));
+  document.getElementById('recent-table-wrap').innerHTML = recentTableHTML(keys.slice(0,6));
 }
 
 // ── Key Actions ────────────────────────────────────────────────────────────
@@ -614,6 +792,14 @@ function openDetail(id) {
   if(!k) return;
   const exp = new Date(k.expires);
   const cre = new Date(k.created);
+  const hwidDisplay = k.hwid
+    ? `<span style="font-family:monospace;font-size:12px;word-break:break-all;color:var(--neon)">${k.hwid}</span>`
+    : `<span style="color:var(--muted)">Not bound</span>`;
+  const copyHwidBtn = k.hwid
+    ? `<button class="btn btn-ghost" style="padding:8px 14px;font-size:12px;margin-top:8px" onclick="navigator.clipboard.writeText('${k.hwid}').then(()=>toast('HWID copied!','info'))">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy HWID
+      </button>` : '';
   document.getElementById('modal-detail-content').innerHTML = `
     <div style="margin-bottom:18px"><div class="generated-key-box" style="font-size:12px">${k.key}</div></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
@@ -623,11 +809,70 @@ function openDetail(id) {
           <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">${l}</div>
           <div style="font-size:14px;font-weight:500">${v}</div>
         </div>`).join('')}
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--neon);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px">🖥️ Device Binding</div>
+      <div style="margin-bottom:8px">
+        <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">HWID</div>
+        <div>${hwidDisplay}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+        ${copyHwidBtn}
+        <button class="btn btn-ghost" style="padding:8px 14px;font-size:12px;margin-top:8px" onclick="resetHWID('${k.id}')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          Reset HWID
+        </button>
+      </div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px">🌐 Last Activity</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Last IP</div>
+          <div style="font-size:13px;font-family:monospace;color:var(--text)">${k.last_ip || '<span style="color:var(--muted)">—</span>'}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Last Seen</div>
+          <div style="font-size:13px;color:var(--text)">${timeAgo(k.last_seen)}</div>
+        </div>
+      </div>
     </div>`;
   document.getElementById('modal-detail-actions').innerHTML = `
     <button class="btn btn-ghost" onclick="closeModal('modal-detail')">Close</button>
+    <button class="btn btn-danger" style="font-size:12px" onclick="fullResetKey('${k.id}')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      Full Reset
+    </button>
     <button class="btn btn-primary" onclick="navigator.clipboard.writeText('${k.key}').then(()=>toast('Copied!','info'))">Copy Key</button>`;
   openModal('modal-detail');
+}
+
+async function resetHWID(id) {
+  confirmAction('Reset HWID?', 'The next login will bind a new device.', async () => {
+    try {
+      await api('POST', `/api/admin/keys/${id}/reset-hwid`);
+      const k = keys.find(k => k.id===id);
+      if(k) k.hwid = '';
+      closeModal('modal-detail');
+      renderKeyTable(); renderRecentTable(); renderStats();
+      toast('HWID reset — next login binds new device', 'success');
+    } catch(e) { toast('Failed to reset HWID', 'error'); }
+  });
+}
+
+async function fullResetKey(id) {
+  confirmAction('Full Reset?', 'Status → Active and HWID will be cleared. This cannot be undone.', async () => {
+    try {
+      const res = await api('POST', `/api/admin/keys/${id}/full-reset`);
+      if (res.success && res.key) {
+        const idx = keys.findIndex(k => k.id===id);
+        if(idx !== -1) keys[idx] = res.key;
+      }
+      closeModal('modal-detail');
+      renderKeyTable(); renderRecentTable(); renderStats();
+      toast('Key fully reset — active & HWID cleared', 'success');
+    } catch(e) { toast('Failed to full reset key', 'error'); }
+  });
 }
 
 function openDaysModal(id) {
@@ -677,6 +922,101 @@ async function saveCredentials() {
   const p = document.getElementById('new-pass').value;
   if(!u||!p){toast('Fill in both fields','error');return}
   toast('Note: Credential changes require server env vars (ADMIN_USER/ADMIN_PASS)', 'info');
+}
+
+// ── Logs ───────────────────────────────────────────────────────────────────
+function populateLogsKeyFilter() {
+  const sel = document.getElementById('logs-key-filter');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">All Keys</option>';
+  const uniqueKeys = [...new Set(keys.map(k => k.key))];
+  uniqueKeys.forEach(key => {
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = key.slice(0, 28) + '…';
+    sel.appendChild(opt);
+  });
+  if (current) sel.value = current;
+}
+
+async function loadLogs(reset = false) {
+  if (reset) { logsOffset = 0; allLogs = []; }
+  const keyFilter = (document.getElementById('logs-key-filter')||{}).value || '';
+  let url = `/api/admin/logs?offset=${logsOffset}`;
+  if (keyFilter) url += `&key=${encodeURIComponent(keyFilter)}`;
+  try {
+    const rows = await api('GET', url);
+    if (reset) {
+      allLogs = rows;
+    } else {
+      allLogs = allLogs.concat(rows);
+    }
+    logsOffset = allLogs.length;
+    renderLogsTable(allLogs);
+    updateRefreshTimestamp('logs');
+    const loadMoreBtn = document.getElementById('logs-load-more');
+    if (loadMoreBtn) loadMoreBtn.style.display = rows.length >= 100 ? 'block' : 'none';
+  } catch(e) {
+    toast('Failed to load logs', 'error');
+  }
+}
+
+async function loadMoreLogs() {
+  await loadLogs(false);
+}
+
+function filterLogs() {
+  const q = (document.getElementById('logs-search')||{}).value.toLowerCase()||'';
+  if (!q) { renderLogsTable(allLogs); return; }
+  const filtered = allLogs.filter(l =>
+    (l.key||'').toLowerCase().includes(q) ||
+    (l.hwid||'').toLowerCase().includes(q) ||
+    (l.ip||'').toLowerCase().includes(q) ||
+    (l.hostname||'').toLowerCase().includes(q)
+  );
+  renderLogsTable(filtered);
+}
+
+function renderLogsTable(logs) {
+  const countEl = document.getElementById('logs-count');
+  if (countEl) countEl.textContent = `${logs.length} entries`;
+  if (!logs.length) {
+    document.getElementById('logs-table-wrap').innerHTML = `<div class="empty"><div class="empty-icon">📋</div><p>No logs found</p></div>`;
+    return;
+  }
+  document.getElementById('logs-table-wrap').innerHTML = `<div style="overflow-x:auto"><table>
+    <thead><tr>
+      <th>Key</th><th>HWID</th><th>IP</th><th>Hostname</th><th>Logged At</th>
+    </tr></thead>
+    <tbody>${logs.map(l => {
+      const keyShort = (l.key||'').slice(0,24) + ((l.key||'').length > 24 ? '…' : '');
+      const hwidShort = l.hwid ? l.hwid.slice(0,16) + '…' : '—';
+      const copyHwid = l.hwid ? `<button class="btn-icon" title="Copy HWID" style="padding:3px 5px;margin-left:4px" onclick="navigator.clipboard.writeText('${(l.hwid||'').replace(/'/g,"\\'")}').then(()=>toast('HWID copied!','info'))"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>` : '';
+      const copyIp = l.ip ? `<button class="btn-icon" title="Copy IP" style="padding:3px 5px;margin-left:4px" onclick="navigator.clipboard.writeText('${(l.ip||'').replace(/'/g,"\\'")}').then(()=>toast('IP copied!','info'))"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>` : '';
+      return `<tr>
+        <td>
+          <span class="key-mono" style="font-size:11px;cursor:pointer" onclick="filterLogsByKey('${(l.key||'').replace(/'/g,"\\'")}') " title="Filter by this key">${keyShort}</span>
+        </td>
+        <td>
+          <span style="font-family:monospace;font-size:11px;color:var(--neon);opacity:.8">${hwidShort}</span>${copyHwid}
+        </td>
+        <td>
+          <span style="font-size:12px;color:var(--muted)">${l.ip||'—'}</span>${copyIp}
+        </td>
+        <td><span style="font-size:12px;color:var(--muted)">${l.hostname||'—'}</span></td>
+        <td><span style="font-size:12px;color:var(--muted)">${timeAgo(l.logged_at)}</span></td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+function filterLogsByKey(key) {
+  const sel = document.getElementById('logs-key-filter');
+  if (sel) {
+    sel.value = key;
+    loadLogs(true);
+  }
 }
 
 // ── Modals ─────────────────────────────────────────────────────────────────
