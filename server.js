@@ -50,6 +50,12 @@ async function initDB() {
         );
     `);
 
+    // ── Migrate existing tables: add columns that may be missing ──
+    await pool.query(`ALTER TABLE keys ADD COLUMN IF NOT EXISTS hwid      TEXT DEFAULT ''`);
+    await pool.query(`ALTER TABLE keys ADD COLUMN IF NOT EXISTS ip_log    TEXT DEFAULT ''`);
+    await pool.query(`ALTER TABLE keys ADD COLUMN IF NOT EXISTS last_ip   TEXT DEFAULT ''`);
+    await pool.query(`ALTER TABLE keys ADD COLUMN IF NOT EXISTS last_seen TIMESTAMPTZ`);
+
     console.log('Database ready (with HWID + IP log tables)');
 }
 
@@ -134,9 +140,7 @@ app.get('/api/log', async (req, res) => {
             `INSERT INTO ip_logs (key, hwid, ip, hostname) VALUES ($1,$2,$3,$4)`,
             [key, hwid, ip, hostname]
         );
-        // Also update last_ip on keys table (add column if not exists)
-        await pool.query(`ALTER TABLE keys ADD COLUMN IF NOT EXISTS last_ip TEXT DEFAULT ''`);
-        await pool.query(`ALTER TABLE keys ADD COLUMN IF NOT EXISTS last_seen TIMESTAMPTZ`);
+        // Update last_ip on keys table
         await pool.query(
             `UPDATE keys SET last_ip=$1, last_seen=NOW() WHERE key=$2`,
             [ip, key]
