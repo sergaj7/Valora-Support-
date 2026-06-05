@@ -202,16 +202,43 @@ app.delete('/api/admin/keys/:id', requireAdmin, async (req, res) => {
 
 // ── ADMIN: HWID Reset ───────────────────────────────────────
 app.post('/api/admin/keys/:id/reset-hwid', requireAdmin, async (req, res) => {
-    await pool.query('UPDATE keys SET hwid=\'\' WHERE id=$1', [req.params.id]);
+    await pool.query("UPDATE keys SET hwid='' WHERE id=$1", [req.params.id]);
     res.json({ success: true, message: 'HWID resettet — nächste Anmeldung bindet neues Gerät' });
+});
+
+// ── ADMIN: Full Reset (status → active + hwid cleared) ──────
+app.post('/api/admin/keys/:id/full-reset', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await pool.query(
+            "UPDATE keys SET hwid='', status='active' WHERE id=$1 RETURNING *",
+            [req.params.id]
+        );
+        if (!rows.length) return res.status(404).json({ error: 'Key not found' });
+        res.json({ success: true, message: 'Key fully reset — status active, HWID cleared', key: toClient(rows[0]) });
+    } catch (e) {
+        console.error('Full reset error:', e.message);
+        res.status(500).json({ error: 'Database error' });
+    }
 });
 
 // ── ADMIN: IP Logs ──────────────────────────────────────────
 app.get('/api/admin/logs', requireAdmin, async (req, res) => {
-    const { key } = req.query;
-    let q = 'SELECT * FROM ip_logs ORDER BY logged_at DESC LIMIT 200';
-    let args = [];
-    if (key) { q = 'SELECT * FROM ip_logs WHERE key=$1 ORDER BY logged_at DESC LIMIT 100'; args=[key]; }
+    const { key, hwid, ip, offset } = req.query;
+    const off = parseInt(offset) || 0;
+    let q, args = [];
+    if (key) {
+        q = 'SELECT * FROM ip_logs WHERE key=$1 ORDER BY logged_at DESC LIMIT 100 OFFSET $2';
+        args = [key.toUpperCase().trim(), off];
+    } else if (hwid) {
+        q = 'SELECT * FROM ip_logs WHERE hwid=$1 ORDER BY logged_at DESC LIMIT 100 OFFSET $2';
+        args = [hwid.trim(), off];
+    } else if (ip) {
+        q = 'SELECT * FROM ip_logs WHERE ip=$1 ORDER BY logged_at DESC LIMIT 100 OFFSET $2';
+        args = [ip.trim(), off];
+    } else {
+        q = 'SELECT * FROM ip_logs ORDER BY logged_at DESC LIMIT 100 OFFSET $1';
+        args = [off];
+    }
     const { rows } = await pool.query(q, args);
     res.json(rows);
 });
