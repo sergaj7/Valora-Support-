@@ -12,84 +12,153 @@
   --border:#2a2a55;--border2:#3a3a70;--accent:#7c5cfc;--accent2:#5b8fff;
   --neon:#00f5ff;--neon2:#ff2d78;--neon3:#39ff14;--text:#e8e8ff;--muted:#7878aa;
   --danger:#ff2d78;--warn:#ffa500;--success:#39ff14;
+  --ease-spring:cubic-bezier(.34,1.56,.64,1);
+  --ease-smooth:cubic-bezier(.4,0,.2,1);
 }
 html,body{height:100%;overflow-x:hidden}
 body{font-family:'Space Grotesk',sans-serif;background:var(--void);color:var(--text);min-height:100vh}
+
+/* ── Background layers ── */
 #stars{position:fixed;inset:0;z-index:0;pointer-events:none}
 .nebula{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
 .nebula::before{content:'';position:absolute;width:900px;height:900px;border-radius:50%;
   background:radial-gradient(circle,rgba(124,92,252,.15) 0%,transparent 70%);
-  top:-200px;left:-200px;animation:drift1 20s ease-in-out infinite alternate}
+  top:-200px;left:-200px;animation:drift1 20s ease-in-out infinite alternate;
+  filter:blur(20px)}
 .nebula::after{content:'';position:absolute;width:700px;height:700px;border-radius:50%;
   background:radial-gradient(circle,rgba(0,245,255,.08) 0%,transparent 70%);
-  bottom:-100px;right:-100px;animation:drift2 25s ease-in-out infinite alternate}
+  bottom:-100px;right:-100px;animation:drift2 25s ease-in-out infinite alternate;
+  filter:blur(20px)}
 @keyframes drift1{from{transform:translate(0,0) scale(1)}to{transform:translate(120px,80px) scale(1.2)}}
 @keyframes drift2{from{transform:translate(0,0) scale(1)}to{transform:translate(-80px,-60px) scale(1.15)}}
+/* extra floating aurora ribbon */
+.aurora{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;opacity:.5}
+.aurora span{position:absolute;left:50%;top:40%;width:60vw;height:180px;border-radius:50%;
+  background:linear-gradient(90deg,transparent,rgba(124,92,252,.18),rgba(0,245,255,.12),transparent);
+  filter:blur(60px);transform-origin:center;animation:auroraSweep 18s ease-in-out infinite}
+.aurora span:nth-child(2){top:60%;animation-delay:-6s;animation-duration:22s;
+  background:linear-gradient(90deg,transparent,rgba(255,45,120,.10),rgba(124,92,252,.14),transparent)}
+.aurora span:nth-child(3){top:20%;animation-delay:-11s;animation-duration:26s;
+  background:linear-gradient(90deg,transparent,rgba(57,255,20,.06),rgba(0,245,255,.10),transparent)}
+@keyframes auroraSweep{
+  0%,100%{transform:translate(-50%,0) rotate(-8deg) scaleX(1);opacity:.4}
+  50%{transform:translate(-50%,-20px) rotate(6deg) scaleX(1.3);opacity:.75}
+}
+
 #app{position:relative;z-index:10;display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+
+/* ── Login ── */
 #login-screen{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;
-  background:rgba(4,4,15,.95);backdrop-filter:blur(20px)}
-.login-box{background:var(--card);border:1px solid var(--border2);border-radius:24px;padding:48px 40px;
+  background:rgba(4,4,15,.95);backdrop-filter:blur(20px);transition:opacity .5s ease,transform .5s var(--ease-smooth)}
+#login-screen.hiding{opacity:0;transform:scale(1.08);pointer-events:none}
+.login-box{position:relative;background:var(--card);border:1px solid var(--border2);border-radius:24px;padding:48px 40px;
   width:420px;max-width:92vw;box-shadow:0 0 80px rgba(124,92,252,.2),0 0 160px rgba(0,245,255,.05);
-  animation:popIn .5s cubic-bezier(.34,1.56,.64,1)}
+  animation:popIn .6s var(--ease-spring);overflow:hidden}
+/* rotating conic glow ring around login */
+.login-box::before{content:'';position:absolute;inset:-2px;border-radius:24px;padding:2px;z-index:-1;
+  background:conic-gradient(from 0deg,transparent,var(--accent),var(--neon),transparent,var(--neon2),transparent);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;opacity:.6;animation:spinRing 6s linear infinite}
+@keyframes spinRing{to{transform:rotate(360deg)}}
 @keyframes popIn{from{opacity:0;transform:scale(.9) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}
 .login-logo{text-align:center;margin-bottom:32px}
 .login-logo .logo-mark{font-family:'Orbitron',monospace;font-size:28px;font-weight:900;
-  background:linear-gradient(135deg,var(--accent),var(--neon));-webkit-background-clip:text;
-  -webkit-text-fill-color:transparent;background-clip:text;letter-spacing:2px}
+  background:linear-gradient(135deg,var(--accent),var(--neon),var(--accent));
+  background-size:200% auto;-webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;background-clip:text;letter-spacing:2px;
+  animation:shine 4s linear infinite}
+@keyframes shine{to{background-position:200% center}}
 .login-logo p{color:var(--muted);font-size:13px;margin-top:6px;letter-spacing:1px}
-.field{margin-bottom:20px}
+.field{margin-bottom:20px;animation:slideField .5s var(--ease-smooth) both}
+.field:nth-child(2){animation-delay:.08s}
+.field:nth-child(3){animation-delay:.16s}
+@keyframes slideField{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:translateX(0)}}
 .field label{display:block;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:1.5px;
   text-transform:uppercase;margin-bottom:8px}
 .field input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;
   padding:14px 18px;color:var(--text);font-family:inherit;font-size:15px;outline:none;
-  transition:border-color .2s,box-shadow .2s}
-.field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,92,252,.2)}
+  transition:border-color .25s,box-shadow .25s,transform .25s}
+.field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,92,252,.2),0 0 24px rgba(124,92,252,.25);transform:translateY(-1px)}
 .login-btn{width:100%;background:linear-gradient(135deg,var(--accent),#5b8fff);
-  border:none;border-radius:12px;padding:16px;color:#fff;font-family:'Orbitron',monospace;
-  font-size:14px;font-weight:700;letter-spacing:2px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
-.login-btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(124,92,252,.5)}
+  background-size:200% 100%;border:none;border-radius:12px;padding:16px;color:#fff;font-family:'Orbitron',monospace;
+  font-size:14px;font-weight:700;letter-spacing:2px;cursor:pointer;transition:transform .2s var(--ease-spring),box-shadow .3s;position:relative;overflow:hidden}
+.login-btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(124,92,252,.5);background-position:100% 0}
+.login-btn:active{transform:translateY(0) scale(.98)}
+.login-btn::after{content:'';position:absolute;top:0;left:-120%;width:60%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);
+  transform:skewX(-20deg);animation:sweep 3.5s ease-in-out infinite}
+@keyframes sweep{0%,60%{left:-120%}100%{left:160%}}
 .login-error{color:var(--danger);font-size:13px;text-align:center;margin-top:12px;min-height:18px}
+.login-error.shake{animation:shake .4s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+
+/* ── Sidebar ── */
 .sidebar{background:linear-gradient(180deg,var(--deep) 0%,var(--surface) 100%);
   border-right:1px solid var(--border);display:flex;flex-direction:column;
   position:sticky;top:0;height:100vh;overflow-y:auto}
 .sidebar-header{padding:28px 24px 20px;border-bottom:1px solid var(--border)}
 .sidebar-logo{font-family:'Orbitron',monospace;font-size:18px;font-weight:900;
-  background:linear-gradient(135deg,var(--accent),var(--neon));-webkit-background-clip:text;
-  -webkit-text-fill-color:transparent;background-clip:text;letter-spacing:2px}
+  background:linear-gradient(135deg,var(--accent),var(--neon),var(--accent));background-size:200% auto;
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:2px;
+  animation:shine 5s linear infinite}
 .sidebar-sub{font-size:11px;color:var(--muted);letter-spacing:1px;margin-top:4px}
 .nav{padding:16px 12px;flex:1}
 .nav-section{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:2px;
   text-transform:uppercase;padding:0 12px;margin:16px 0 8px}
-.nav-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;
-  cursor:pointer;transition:all .2s;font-size:14px;font-weight:500;color:var(--muted);
-  margin-bottom:2px;border:1px solid transparent}
-.nav-item svg{width:18px;height:18px;flex-shrink:0;opacity:.7;transition:opacity .2s}
-.nav-item:hover{background:rgba(124,92,252,.1);color:var(--text);border-color:var(--border)}
+.nav-item{position:relative;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;
+  cursor:pointer;transition:background .25s,color .25s,border-color .25s,transform .18s var(--ease-spring);
+  font-size:14px;font-weight:500;color:var(--muted);margin-bottom:2px;border:1px solid transparent;overflow:hidden}
+.nav-item svg{width:18px;height:18px;flex-shrink:0;opacity:.7;transition:opacity .25s,transform .3s var(--ease-spring)}
+.nav-item:hover{background:rgba(124,92,252,.1);color:var(--text);border-color:var(--border);transform:translateX(4px)}
+.nav-item:hover svg{transform:scale(1.15) rotate(-4deg)}
 .nav-item.active{background:linear-gradient(135deg,rgba(124,92,252,.25),rgba(91,143,255,.15));
   color:#fff;border-color:rgba(124,92,252,.4)}
 .nav-item.active svg{opacity:1}
+/* animated indicator bar on active */
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:3px;height:60%;border-radius:0 4px 4px 0;background:linear-gradient(var(--accent),var(--neon));
+  box-shadow:0 0 10px var(--accent);animation:growBar .35s var(--ease-spring)}
+@keyframes growBar{from{height:0;opacity:0}to{height:60%;opacity:1}}
 .sidebar-footer{padding:16px 24px;border-top:1px solid var(--border)}
 .user-card{display:flex;align-items:center;gap:12px}
 .avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--neon2));
-  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;
+  animation:avatarPulse 3s ease-in-out infinite}
+@keyframes avatarPulse{0%,100%{box-shadow:0 0 0 0 rgba(124,92,252,.4)}50%{box-shadow:0 0 0 6px rgba(124,92,252,0)}}
 .user-info p{font-size:13px;font-weight:600}
 .user-info span{font-size:11px;color:var(--muted)}
 .logout-btn{margin-left:auto;background:none;border:1px solid var(--border);border-radius:8px;
   padding:6px 10px;color:var(--muted);cursor:pointer;font-size:11px;transition:all .2s}
-.logout-btn:hover{border-color:var(--danger);color:var(--danger)}
+.logout-btn:hover{border-color:var(--danger);color:var(--danger);box-shadow:0 0 12px rgba(255,45,120,.3)}
+
+/* ── Main / pages ── */
 .main{padding:32px;overflow-y:auto}
 .page{display:none}
-.page.active{display:block;animation:fadeUp .35s ease}
-@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.page.active{display:block}
+.page.active>*{animation:fadeUp .5s var(--ease-smooth) both}
+.page.active>*:nth-child(1){animation-delay:.02s}
+.page.active>*:nth-child(2){animation-delay:.1s}
+.page.active>*:nth-child(3){animation-delay:.18s}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 .page-header{margin-bottom:32px}
 .page-header h1{font-family:'Orbitron',monospace;font-size:22px;font-weight:700;
   background:linear-gradient(135deg,#fff,var(--accent));-webkit-background-clip:text;
   -webkit-text-fill-color:transparent;background-clip:text;letter-spacing:1px}
 .page-header p{color:var(--muted);font-size:14px;margin-top:6px}
+
+/* ── Stats ── */
 .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:32px}
 .stat-card{background:var(--card);border:1px solid var(--border);border-radius:16px;
-  padding:20px 22px;position:relative;overflow:hidden;transition:transform .2s,border-color .2s}
-.stat-card:hover{transform:translateY(-3px);border-color:var(--border2)}
+  padding:20px 22px;position:relative;overflow:hidden;
+  transition:transform .3s var(--ease-spring),border-color .3s,box-shadow .3s;
+  animation:cardPop .5s var(--ease-spring) both}
+.stat-card:hover{transform:translateY(-5px) scale(1.02);border-color:var(--border2);box-shadow:0 12px 40px rgba(124,92,252,.2)}
+/* moving light sheen across card on hover */
+.stat-card::after{content:'';position:absolute;top:0;left:-150%;width:80%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent);
+  transform:skewX(-20deg);transition:left .6s ease}
+.stat-card:hover::after{left:160%}
+@keyframes cardPop{from{opacity:0;transform:translateY(24px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
 .stat-label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase}
 .stat-num{font-family:'Orbitron',monospace;font-size:32px;font-weight:900;margin-top:8px;
   background:linear-gradient(135deg,#fff,var(--accent));-webkit-background-clip:text;
@@ -97,24 +166,36 @@ body{font-family:'Space Grotesk',sans-serif;background:var(--void);color:var(--t
 .stat-card.green .stat-num{background:linear-gradient(135deg,#fff,var(--success));-webkit-background-clip:text;background-clip:text}
 .stat-card.red .stat-num{background:linear-gradient(135deg,#fff,var(--danger));-webkit-background-clip:text;background-clip:text}
 .stat-card.yellow .stat-num{background:linear-gradient(135deg,#fff,var(--warn));-webkit-background-clip:text;background-clip:text}
-.stat-badge{position:absolute;top:20px;right:20px;font-size:22px}
-.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:20px;overflow:hidden}
+.stat-badge{position:absolute;top:20px;right:20px;font-size:22px;transition:transform .3s var(--ease-spring)}
+.stat-card:hover .stat-badge{transform:scale(1.25) rotate(8deg)}
+
+/* ── Tables ── */
+.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:20px;overflow:hidden;
+  transition:border-color .3s}
+.table-wrap:hover{border-color:var(--border2)}
 .table-toolbar{display:flex;align-items:center;gap:12px;padding:20px 24px;border-bottom:1px solid var(--border);flex-wrap:wrap}
 .table-toolbar h2{font-family:'Orbitron',monospace;font-size:14px;font-weight:700;letter-spacing:1px;flex:1;min-width:120px}
 .search-box{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);
-  border-radius:10px;padding:8px 14px;flex:1;max-width:280px}
+  border-radius:10px;padding:8px 14px;flex:1;max-width:280px;transition:border-color .25s,box-shadow .25s}
+.search-box:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,92,252,.15)}
+.search-box svg{transition:transform .3s,color .25s}
+.search-box:focus-within svg{color:var(--accent);transform:scale(1.1)}
 .search-box input{background:none;border:none;color:var(--text);font-family:inherit;font-size:13px;outline:none;width:100%}
 .search-box input::placeholder{color:var(--muted)}
 table{width:100%;border-collapse:collapse}
 thead tr{border-bottom:1px solid var(--border)}
 thead th{text-align:left;padding:14px 20px;font-size:11px;font-weight:700;color:var(--muted);
   letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap}
-tbody tr{border-bottom:1px solid rgba(42,42,85,.5);transition:background .15s}
+tbody tr{border-bottom:1px solid rgba(42,42,85,.5);transition:background .2s,transform .2s,box-shadow .2s;
+  animation:rowIn .4s var(--ease-smooth) both}
+@keyframes rowIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 tbody tr:last-child{border-bottom:none}
-tbody tr:hover{background:rgba(124,92,252,.05)}
+tbody tr:hover{background:rgba(124,92,252,.07);transform:scale(1.006);box-shadow:inset 3px 0 0 var(--accent)}
 tbody td{padding:14px 20px;font-size:13px;vertical-align:middle}
 .key-mono{font-family:monospace;font-size:12px;color:var(--neon);
-  background:rgba(0,245,255,.07);padding:4px 10px;border-radius:6px;border:1px solid rgba(0,245,255,.15)}
+  background:rgba(0,245,255,.07);padding:4px 10px;border-radius:6px;border:1px solid rgba(0,245,255,.15);
+  transition:box-shadow .25s,border-color .25s}
+tbody tr:hover .key-mono{box-shadow:0 0 12px rgba(0,245,255,.25);border-color:rgba(0,245,255,.4)}
 .badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;
   font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
 .badge.active{background:rgba(57,255,20,.1);color:var(--success);border:1px solid rgba(57,255,20,.2)}
@@ -122,80 +203,121 @@ tbody td{padding:14px 20px;font-size:13px;vertical-align:middle}
 .badge.banned{background:rgba(255,45,120,.1);color:var(--danger);border:1px solid rgba(255,45,120,.2)}
 .badge.expired{background:rgba(165,165,165,.1);color:#aaa;border:1px solid rgba(165,165,165,.2)}
 .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-.dot.g{background:var(--success)}.dot.b{background:#5b8fff}.dot.r{background:var(--danger)}.dot.x{background:#888}
+.dot.g{background:var(--success);box-shadow:0 0 6px var(--success);animation:blink 2s ease-in-out infinite}
+.dot.b{background:#5b8fff;box-shadow:0 0 6px #5b8fff}
+.dot.r{background:var(--danger);box-shadow:0 0 6px var(--danger)}
+.dot.x{background:#888}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
 .actions{display:flex;align-items:center;gap:6px}
 .btn-icon{background:none;border:1px solid var(--border);border-radius:8px;padding:6px 8px;
-  cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;color:var(--muted)}
-.btn-icon:hover{border-color:var(--accent);color:var(--accent);background:rgba(124,92,252,.1)}
+  cursor:pointer;transition:border-color .2s,color .2s,background .2s,transform .18s var(--ease-spring);
+  display:inline-flex;align-items:center;color:var(--muted)}
+.btn-icon:hover{border-color:var(--accent);color:var(--accent);background:rgba(124,92,252,.1);transform:translateY(-2px) scale(1.08)}
+.btn-icon:active{transform:scale(.9)}
 .btn-icon.danger:hover{border-color:var(--danger);color:var(--danger);background:rgba(255,45,120,.1)}
 .btn-icon.warn:hover{border-color:var(--warn);color:var(--warn);background:rgba(255,165,0,.1)}
 .btn-icon.success:hover{border-color:var(--success);color:var(--success);background:rgba(57,255,20,.1)}
 .btn-icon svg{width:15px;height:15px}
-.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:10px;
-  font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;border:none;letter-spacing:.5px}
-.btn-primary{background:linear-gradient(135deg,var(--accent),#5b8fff);color:#fff}
-.btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(124,92,252,.4)}
+
+/* ── Buttons ── */
+.btn{position:relative;display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:10px;
+  font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;
+  transition:transform .2s var(--ease-spring),box-shadow .3s;border:none;letter-spacing:.5px;overflow:hidden}
+.btn:active{transform:scale(.96)}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#5b8fff)}
+.btn-primary{color:#fff}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(124,92,252,.45)}
 .btn-ghost{background:none;border:1px solid var(--border2);color:var(--text)}
-.btn-ghost:hover{border-color:var(--accent);background:rgba(124,92,252,.1)}
+.btn-ghost:hover{border-color:var(--accent);background:rgba(124,92,252,.1);transform:translateY(-2px)}
 .btn-danger{background:linear-gradient(135deg,var(--danger),#ff6b6b);color:#fff}
-.btn-danger:hover{box-shadow:0 6px 20px rgba(255,45,120,.4)}
+.btn-danger:hover{box-shadow:0 6px 24px rgba(255,45,120,.45);transform:translateY(-2px)}
+/* ripple */
+.ripple{position:absolute;border-radius:50%;transform:scale(0);background:rgba(255,255,255,.4);
+  pointer-events:none;animation:rippleAnim .6s ease-out}
+@keyframes rippleAnim{to{transform:scale(3.5);opacity:0}}
+
+/* ── Modals ── */
 .modal-overlay{position:fixed;inset:0;z-index:500;background:rgba(4,4,15,.85);
   backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center}
-.modal-overlay.open{display:flex;animation:fadeIn .2s ease}
+.modal-overlay.open{display:flex;animation:fadeIn .25s ease}
+.modal-overlay.closing{animation:fadeOut .2s ease forwards}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes fadeOut{to{opacity:0}}
 .modal{background:var(--card2);border:1px solid var(--border2);border-radius:20px;
   padding:32px;width:500px;max-width:90vw;box-shadow:0 0 80px rgba(124,92,252,.2);
-  animation:popIn .3s cubic-bezier(.34,1.56,.64,1)}
+  animation:modalIn .4s var(--ease-spring)}
+.modal-overlay.closing .modal{animation:modalOut .2s ease forwards}
+@keyframes modalIn{from{opacity:0;transform:scale(.85) translateY(30px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes modalOut{to{opacity:0;transform:scale(.9) translateY(20px)}}
 .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
 .modal-header h3{font-family:'Orbitron',monospace;font-size:16px;font-weight:700;
   background:linear-gradient(135deg,#fff,var(--accent));-webkit-background-clip:text;
   -webkit-text-fill-color:transparent;background-clip:text}
 .modal-close{background:none;border:1px solid var(--border);border-radius:8px;padding:6px;
-  cursor:pointer;color:var(--muted);transition:all .2s}
-.modal-close:hover{border-color:var(--danger);color:var(--danger)}
+  cursor:pointer;color:var(--muted);transition:all .25s var(--ease-spring)}
+.modal-close:hover{border-color:var(--danger);color:var(--danger);transform:rotate(90deg)}
 .form-group{margin-bottom:18px}
 .form-group label{display:block;font-size:12px;font-weight:600;color:var(--muted);
   letter-spacing:1.2px;text-transform:uppercase;margin-bottom:8px}
 .form-group input,.form-group select{width:100%;background:var(--surface);border:1px solid var(--border);
   border-radius:10px;padding:12px 16px;color:var(--text);font-family:inherit;font-size:14px;outline:none;
-  transition:border-color .2s;-webkit-appearance:none}
+  transition:border-color .25s,box-shadow .25s;-webkit-appearance:none}
 .form-group input:focus,.form-group select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,92,252,.15)}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .modal-footer{display:flex;gap:12px;justify-content:flex-end;margin-top:28px}
 .generated-key-box{background:var(--surface);border:1px solid rgba(0,245,255,.3);border-radius:12px;
   padding:16px;font-family:monospace;font-size:13px;color:var(--neon);letter-spacing:1px;
-  text-align:center;word-break:break-all;margin:16px 0}
+  text-align:center;word-break:break-all;margin:16px 0;position:relative;overflow:hidden}
+.generated-key-box::after{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(0,245,255,.12),transparent);animation:keyScan 2.5s ease-in-out infinite}
+@keyframes keyScan{0%{left:-100%}60%,100%{left:120%}}
+
+/* ── Toast ── */
 .toast-container{position:fixed;bottom:32px;right:32px;z-index:9999;display:flex;flex-direction:column;gap:10px}
 .toast{background:var(--card2);border:1px solid var(--border2);border-radius:12px;
   padding:14px 20px;display:flex;align-items:center;gap:12px;font-size:13px;
-  box-shadow:0 8px 32px rgba(0,0,0,.4);animation:slideIn .3s ease;min-width:260px}
-.toast.success{border-color:rgba(57,255,20,.3)}.toast.error{border-color:rgba(255,45,120,.3)}.toast.info{border-color:rgba(124,92,252,.3)}
-@keyframes slideIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+  box-shadow:0 8px 32px rgba(0,0,0,.4);animation:toastIn .5s var(--ease-spring);min-width:260px;position:relative;overflow:hidden}
+@keyframes toastIn{from{opacity:0;transform:translateX(60px) scale(.9)}to{opacity:1;transform:translateX(0) scale(1)}}
+.toast::after{content:'';position:absolute;bottom:0;left:0;height:2px;width:100%;transform-origin:left;
+  animation:toastBar 3s linear forwards}
+@keyframes toastBar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+.toast.success{border-color:rgba(57,255,20,.3)}.toast.success::after{background:var(--success)}
+.toast.error{border-color:rgba(255,45,120,.3)}.toast.error::after{background:var(--danger)}
+.toast.info{border-color:rgba(124,92,252,.3)}.toast.info::after{background:var(--accent)}
 .toast-icon{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px}
 .toast.success .toast-icon{background:rgba(57,255,20,.15);color:var(--success)}
 .toast.error .toast-icon{background:rgba(255,45,120,.15);color:var(--danger)}
 .toast.info .toast-icon{background:rgba(124,92,252,.15);color:var(--accent)}
+
 .confirm-box{background:var(--card2);border:1px solid var(--border2);border-radius:20px;
-  padding:28px;width:380px;max-width:90vw;text-align:center;animation:popIn .25s ease}
+  padding:28px;width:380px;max-width:90vw;text-align:center;animation:modalIn .35s var(--ease-spring)}
 .confirm-box h3{font-family:'Orbitron',monospace;font-size:15px;margin-bottom:12px}
 .confirm-box p{color:var(--muted);font-size:13px;margin-bottom:24px;line-height:1.6}
-.empty{padding:60px;text-align:center;color:var(--muted)}
-.empty-icon{font-size:40px;margin-bottom:12px;opacity:.4}
-.settings-section{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:20px}
+.empty{padding:60px;text-align:center;color:var(--muted);animation:fadeUp .5s ease}
+.empty-icon{font-size:40px;margin-bottom:12px;opacity:.4;animation:floaty 3s ease-in-out infinite}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.settings-section{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:20px;transition:border-color .3s}
+.settings-section:hover{border-color:var(--border2)}
 .settings-section h3{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;
   color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:20px;
   padding-bottom:12px;border-bottom:1px solid var(--border)}
 ::-webkit-scrollbar{width:6px}
 ::-webkit-scrollbar-track{background:var(--deep)}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
-@keyframes glowPulse{0%,100%{box-shadow:0 0 20px rgba(124,92,252,.3)}50%{box-shadow:0 0 40px rgba(124,92,252,.6)}}
+::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+@keyframes glowPulse{0%,100%{box-shadow:0 0 20px rgba(124,92,252,.3)}50%{box-shadow:0 0 45px rgba(124,92,252,.6)}}
 .glow{animation:glowPulse 3s ease-in-out infinite}
+/* refresh icon spin helper */
+.spin-once{animation:spinOnce .6s var(--ease-smooth)}
+@keyframes spinOnce{to{transform:rotate(360deg)}}
 @media(max-width:768px){#app{grid-template-columns:1fr}.sidebar{display:none}.main{padding:20px}}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 </style>
 </head>
 <body>
 <canvas id="stars"></canvas>
 <div class="nebula"></div>
+<div class="aurora"><span></span><span></span><span></span></div>
 
 <!-- LOGIN -->
 <div id="login-screen">
@@ -459,13 +581,60 @@ tbody td{padding:14px 20px;font-size:13px;vertical-align:middle}
 <div class="toast-container" id="toast-container"></div>
 
 <script>
-// ── Stars ──────────────────────────────────────────────────────────────────
+// ── Stars (upgraded: twinkle + parallax + occasional shooting star) ──────────
 (function(){
   const c=document.getElementById('stars'),ctx=c.getContext('2d');
-  let W,H,stars=[];
+  let W,H,stars=[],shooters=[],mouseX=0,mouseY=0;
   function resize(){W=c.width=window.innerWidth;H=c.height=window.innerHeight;init()}
-  function init(){stars=[];for(let i=0;i<280;i++)stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.8+.2,a:Math.random(),speed:Math.random()*.003+.001,color:`hsl(${Math.random()*60+200},80%,80%)`})}
-  function draw(){ctx.clearRect(0,0,W,H);stars.forEach(s=>{s.a+=s.speed;ctx.globalAlpha=(.5+.5*Math.sin(s.a))*.8;ctx.fillStyle=s.color;ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill()});ctx.globalAlpha=1;requestAnimationFrame(draw)}
+  function init(){
+    stars=[];
+    const count=Math.min(320,Math.floor(W*H/6500));
+    for(let i=0;i<count;i++)stars.push({
+      x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.8+.2,
+      a:Math.random(),speed:Math.random()*.004+.001,
+      depth:Math.random()*.6+.2,
+      color:`hsl(${Math.random()*60+200},80%,80%)`
+    });
+  }
+  window.addEventListener('mousemove',e=>{mouseX=(e.clientX/W-.5);mouseY=(e.clientY/H-.5)});
+  function spawnShooter(){
+    if(Math.random()<.006 && shooters.length<2){
+      const startX=Math.random()*W;
+      shooters.push({x:startX,y:-20,vx:(Math.random()*4+3),vy:(Math.random()*4+4),life:1});
+    }
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    // stars with subtle parallax toward mouse
+    stars.forEach(s=>{
+      s.a+=s.speed;
+      const px=s.x+mouseX*30*s.depth;
+      const py=s.y+mouseY*30*s.depth;
+      const tw=(.5+.5*Math.sin(s.a))*.85;
+      ctx.globalAlpha=tw;
+      ctx.fillStyle=s.color;
+      ctx.beginPath();ctx.arc(px,py,s.r,0,Math.PI*2);ctx.fill();
+      // glow for brighter stars
+      if(s.r>1.3){
+        ctx.globalAlpha=tw*.25;
+        ctx.beginPath();ctx.arc(px,py,s.r*3,0,Math.PI*2);ctx.fill();
+      }
+    });
+    // shooting stars
+    spawnShooter();
+    shooters.forEach(sh=>{
+      sh.x+=sh.vx;sh.y+=sh.vy;sh.life-=.012;
+      const tailX=sh.x-sh.vx*8,tailY=sh.y-sh.vy*8;
+      const g=ctx.createLinearGradient(tailX,tailY,sh.x,sh.y);
+      g.addColorStop(0,'rgba(0,245,255,0)');
+      g.addColorStop(1,`rgba(180,240,255,${Math.max(0,sh.life)})`);
+      ctx.globalAlpha=1;ctx.strokeStyle=g;ctx.lineWidth=2;ctx.lineCap='round';
+      ctx.beginPath();ctx.moveTo(tailX,tailY);ctx.lineTo(sh.x,sh.y);ctx.stroke();
+    });
+    shooters=shooters.filter(sh=>sh.life>0 && sh.y<H+40);
+    ctx.globalAlpha=1;
+    requestAnimationFrame(draw);
+  }
   window.addEventListener('resize',resize);resize();draw();
 })();
 
@@ -482,6 +651,21 @@ let logsAutoRefresh = true;
 let logsAutoRefreshTimer = null;
 let dashAutoRefreshTimer = null;
 let keysAutoRefreshTimer = null;
+
+// ── Ripple effect on all .btn / .login-btn ──────────────────────────────────
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.btn, .login-btn');
+  if(!btn) return;
+  const rect = btn.getBoundingClientRect();
+  const r = document.createElement('span');
+  r.className = 'ripple';
+  const size = Math.max(rect.width, rect.height);
+  r.style.width = r.style.height = size + 'px';
+  r.style.left = (e.clientX - rect.left - size/2) + 'px';
+  r.style.top = (e.clientY - rect.top - size/2) + 'px';
+  btn.appendChild(r);
+  setTimeout(() => r.remove(), 600);
+});
 
 // ── API ───────────────────────────────────────────────────────────────────
 async function api(method, path, body) {
@@ -504,7 +688,9 @@ async function doLogin() {
     const res = await api('POST', '/api/admin/login', { user: u, pass: p });
     if (res.success) {
       adminToken = res.token;
-      document.getElementById('login-screen').style.display = 'none';
+      const screen = document.getElementById('login-screen');
+      screen.classList.add('hiding');
+      setTimeout(() => { screen.style.display = 'none'; screen.classList.remove('hiding'); }, 500);
       document.getElementById('sidebar-user').textContent = u;
       await loadKeys();
       renderStats(); renderKeyTable(); renderRecentTable();
@@ -512,10 +698,12 @@ async function doLogin() {
       toast('Welcome back, Admin!', 'success');
     } else {
       err.textContent = 'Invalid credentials. Try again.';
+      err.classList.remove('shake'); void err.offsetWidth; err.classList.add('shake');
       setTimeout(() => err.textContent = '', 3000);
     }
   } catch(e) {
     err.textContent = 'Server not reachable.';
+    err.classList.remove('shake'); void err.offsetWidth; err.classList.add('shake');
   }
 }
 
@@ -537,7 +725,6 @@ async function loadKeys() {
 // ── Auto-Refresh ───────────────────────────────────────────────────────────
 function startAutoRefresh() {
   stopAutoRefresh();
-  // Dashboard + Keys: refresh every 30s
   dashAutoRefreshTimer = setInterval(async () => {
     const dashActive = document.getElementById('page-dashboard').classList.contains('active');
     const keysActive = document.getElementById('page-keys').classList.contains('active');
@@ -624,14 +811,34 @@ async function generateKey() {
   try {
     const newKey = await api('POST', '/api/admin/keys', { key, type, user, days, status: 'active', expires, prefix });
     keys.unshift(newKey);
-    document.getElementById('gen-key-display').textContent = newKey.key;
+    const disp = document.getElementById('gen-key-display');
     document.getElementById('gen-result').style.display = 'block';
     document.getElementById('gen-btn').style.display = 'none';
+    scrambleReveal(disp, newKey.key); // fun decode animation
     renderStats();
     toast('Key generated & saved to server!', 'success');
   } catch(e) {
     toast('Failed to save key', 'error');
   }
+}
+
+// scramble/decode reveal for generated key
+function scrambleReveal(el, finalText){
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789-';
+  let frame=0;
+  const total=finalText.length;
+  clearInterval(el._scr);
+  el._scr=setInterval(()=>{
+    let out='';
+    for(let i=0;i<total;i++){
+      if(i < frame/2){ out+=finalText[i]; }
+      else if(finalText[i]==='-'){ out+='-'; }
+      else { out+=chars[Math.floor(Math.random()*chars.length)]; }
+    }
+    el.textContent=out;
+    frame++;
+    if(frame/2>=total){ el.textContent=finalText; clearInterval(el._scr); }
+  },35);
 }
 
 function resetGen() {
@@ -643,7 +850,8 @@ function copyGenKey() {
     .then(() => toast('Copied to clipboard!', 'info'));
 }
 
-// ── Stats ──────────────────────────────────────────────────────────────────
+// ── Stats (with count-up animation) ──────────────────────────────────────────
+let _lastStats = {};
 function renderStats() {
   const total   = keys.length;
   const active  = keys.filter(k => k.status==='active').length;
@@ -652,15 +860,37 @@ function renderStats() {
   const expired = keys.filter(k => k.status==='expired').length;
   const hwidBound = keys.filter(k => k.hwid && k.hwid !== '').length;
   const uniqueIPs = new Set(keys.filter(k => k.last_ip && k.last_ip !== '').map(k => k.last_ip)).size;
-  document.getElementById('stats-grid').innerHTML = `
-    <div class="stat-card"><div class="stat-label">Total Keys</div><div class="stat-num">${total}</div><div class="stat-badge">🔑</div></div>
-    <div class="stat-card green"><div class="stat-label">Active</div><div class="stat-num">${active}</div><div class="stat-badge">✅</div></div>
-    <div class="stat-card"><div class="stat-label">Frozen</div><div class="stat-num">${frozen}</div><div class="stat-badge">❄️</div></div>
-    <div class="stat-card red"><div class="stat-label">Banned</div><div class="stat-num">${banned}</div><div class="stat-badge">🚫</div></div>
-    <div class="stat-card yellow"><div class="stat-label">Expired</div><div class="stat-num">${expired}</div><div class="stat-badge">⏱️</div></div>
-    <div class="stat-card" style="border-color:rgba(0,245,255,.2)"><div class="stat-label">HWID Bindings</div><div class="stat-num" style="background:linear-gradient(135deg,#fff,var(--neon));-webkit-background-clip:text;background-clip:text">${hwidBound}</div><div class="stat-badge">🖥️</div></div>
-    <div class="stat-card" style="border-color:rgba(57,255,20,.2)"><div class="stat-label">Unique IPs</div><div class="stat-num" style="background:linear-gradient(135deg,#fff,var(--neon3));-webkit-background-clip:text;background-clip:text">${uniqueIPs}</div><div class="stat-badge">🌐</div></div>
-  `;
+  const cards=[
+    {cls:'',label:'Total Keys',val:total,badge:'🔑',grad:''},
+    {cls:'green',label:'Active',val:active,badge:'✅',grad:''},
+    {cls:'',label:'Frozen',val:frozen,badge:'❄️',grad:''},
+    {cls:'red',label:'Banned',val:banned,badge:'🚫',grad:''},
+    {cls:'yellow',label:'Expired',val:expired,badge:'⏱️',grad:''},
+    {cls:'',label:'HWID Bindings',val:hwidBound,badge:'🖥️',grad:'linear-gradient(135deg,#fff,var(--neon))',border:'rgba(0,245,255,.2)'},
+    {cls:'',label:'Unique IPs',val:uniqueIPs,badge:'🌐',grad:'linear-gradient(135deg,#fff,var(--neon3))',border:'rgba(57,255,20,.2)'},
+  ];
+  document.getElementById('stats-grid').innerHTML = cards.map((c,i)=>`
+    <div class="stat-card ${c.cls}" style="animation-delay:${i*0.06}s;${c.border?`border-color:${c.border}`:''}">
+      <div class="stat-label">${c.label}</div>
+      <div class="stat-num" data-target="${c.val}" ${c.grad?`style="background:${c.grad};-webkit-background-clip:text;background-clip:text"`:''}>0</div>
+      <div class="stat-badge">${c.badge}</div>
+    </div>`).join('');
+  // animate counters
+  document.querySelectorAll('.stat-num[data-target]').forEach(el=>{
+    const target=parseInt(el.getAttribute('data-target'))||0;
+    animateCount(el,target);
+  });
+}
+
+function animateCount(el,target){
+  const dur=800, start=performance.now();
+  function step(now){
+    const t=Math.min(1,(now-start)/dur);
+    const eased=1-Math.pow(1-t,3); // easeOutCubic
+    el.textContent=Math.round(eased*target);
+    if(t<1) requestAnimationFrame(step); else el.textContent=target;
+  }
+  requestAnimationFrame(step);
 }
 
 // ── Time Ago ───────────────────────────────────────────────────────────────
@@ -719,7 +949,7 @@ function tableHTML(list) {
       <th>Key</th><th>User</th><th>Type</th><th>Status</th><th>Expires</th>
       <th>HWID</th><th>Last IP</th><th>Last Seen</th><th>Actions</th>
     </tr></thead>
-    <tbody>${list.map(k=>`<tr>
+    <tbody>${list.map((k,i)=>`<tr style="animation-delay:${Math.min(i*0.03,0.4)}s">
       <td><span class="key-mono">${k.key.slice(0,24)}…</span></td>
       <td>${k.user}</td>
       <td><span style="font-size:12px;color:var(--muted)">${k.type}</span></td>
@@ -750,7 +980,7 @@ function recentTableHTML(list) {
   if(!list.length) return `<div class="empty"><div class="empty-icon">🔍</div><p>No keys found</p></div>`;
   return `<table>
     <thead><tr><th>Key</th><th>User</th><th>Type</th><th>Status</th><th>Expires</th><th>Actions</th></tr></thead>
-    <tbody>${list.map(k=>`<tr>
+    <tbody>${list.map((k,i)=>`<tr style="animation-delay:${i*0.05}s">
       <td><span class="key-mono">${k.key.slice(0,24)}…</span></td>
       <td>${k.user}</td>
       <td><span style="font-size:12px;color:var(--muted)">${k.type}</span></td>
@@ -989,12 +1219,12 @@ function renderLogsTable(logs) {
     <thead><tr>
       <th>Key</th><th>HWID</th><th>IP</th><th>Hostname</th><th>Logged At</th>
     </tr></thead>
-    <tbody>${logs.map(l => {
+    <tbody>${logs.map((l,i) => {
       const keyShort = (l.key||'').slice(0,24) + ((l.key||'').length > 24 ? '…' : '');
       const hwidShort = l.hwid ? l.hwid.slice(0,16) + '…' : '—';
       const copyHwid = l.hwid ? `<button class="btn-icon" title="Copy HWID" style="padding:3px 5px;margin-left:4px" onclick="navigator.clipboard.writeText('${(l.hwid||'').replace(/'/g,"\\'")}').then(()=>toast('HWID copied!','info'))"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>` : '';
       const copyIp = l.ip ? `<button class="btn-icon" title="Copy IP" style="padding:3px 5px;margin-left:4px" onclick="navigator.clipboard.writeText('${(l.ip||'').replace(/'/g,"\\'")}').then(()=>toast('IP copied!','info'))"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>` : '';
-      return `<tr>
+      return `<tr style="animation-delay:${Math.min(i*0.02,0.4)}s">
         <td>
           <span class="key-mono" style="font-size:11px;cursor:pointer" onclick="filterLogsByKey('${(l.key||'').replace(/'/g,"\\'")}') " title="Filter by this key">${keyShort}</span>
         </td>
@@ -1019,10 +1249,16 @@ function filterLogsByKey(key) {
   }
 }
 
-// ── Modals ─────────────────────────────────────────────────────────────────
+// ── Modals (with animated close) ─────────────────────────────────────────────
 function openModal(id){document.getElementById(id).classList.add('open')}
-function closeModal(id){document.getElementById(id).classList.remove('open')}
-document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open')}));
+function closeModal(id){
+  const el=document.getElementById(id);
+  el.classList.add('closing');
+  setTimeout(()=>{el.classList.remove('open');el.classList.remove('closing')},200);
+}
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{
+  if(e.target===o) closeModal(o.id);
+}));
 function confirmAction(title,body,cb){
   document.getElementById('confirm-title').textContent=title;
   document.getElementById('confirm-body').textContent=body;
@@ -1037,7 +1273,7 @@ function toast(msg, type='info') {
   t.className=`toast ${type}`;
   t.innerHTML=`<div class="toast-icon">${icons[type]||'i'}</div><span>${msg}</span>`;
   document.getElementById('toast-container').appendChild(t);
-  setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(40px)';t.style.transition='all .3s';setTimeout(()=>t.remove(),300)},3000);
+  setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(60px) scale(.9)';t.style.transition='all .35s var(--ease-smooth)';setTimeout(()=>t.remove(),350)},3000);
 }
 </script>
 </body>
